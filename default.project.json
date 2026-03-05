@@ -1,0 +1,23 @@
+{
+    "name": "tomori",
+    "tree": {
+        "$className": "DataModel",
+
+        "ReplicatedStorage": {
+            "Tomori": {
+                "$className": "Folder",
+                "$path": "src/shared"
+            }
+        },
+
+        "StarterPlayer": {
+            "StarterPlayerScripts": {
+                "$path": "src/client"
+            }
+        },
+
+        "ServerScriptService": {
+            "$path": "src/server"
+        }
+    }
+}

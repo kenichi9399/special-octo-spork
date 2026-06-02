@@ -1,0 +1,19 @@
+{
+  "name": "いきもの たからさがし 3D",
+  "short_name": "いきもの探し",
+  "description": "小学1年生向けの3Dいきもの宝探しゲームです。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#9bd7e7",
+  "theme_color": "#68b96a",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

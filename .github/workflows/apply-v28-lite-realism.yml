@@ -1,0 +1,61 @@
+name: Apply v28 lite realism
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-v28-lite-realism.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          repl={
+          'for(let i=0;i<38;i++)trees.push':'for(let i=0;i<28;i++)trees.push',
+          'for(let i=0;i<90;i++){const x=Math.sin(i*9.7)*52':'for(let i=0;i<42;i++){const x=Math.sin(i*9.7)*52',
+          'for(let i=0;i<38;i++)flowers.push':'for(let i=0;i<20;i++)flowers.push',
+          'for(let i=0;i<52;i++)pebbles.push':'for(let i=0;i<22;i++)pebbles.push',
+          'for(let i=0;i<24;i++)fireflies.push':'for(let i=0;i<12;i++)fireflies.push',
+          'for(let i=0;i<46;i++){const w=waters[i%waters.length],a=i*.61':'for(let i=0;i<22;i++){const w=waters[i%waters.length],a=i*.61',
+          'for(let i=0;i<24;i++)mushrooms.push':'for(let i=0;i<14;i++)mushrooms.push',
+          'for(let i=0;i<42;i++)leaves.push':'for(let i=0;i<18;i++)leaves.push',
+          'for(let i=0;i<14;i++)clouds.push':'for(let i=0;i<8;i++)clouds.push',
+          'for(let i=0;i<34;i++){const w=waters[i%waters.length],a=i*.78':'for(let i=0;i<16;i++){const w=waters[i%waters.length],a=i*.78',
+          'for(let i=0;i<28;i++)spores.push':'for(let i=0;i<12;i++)spores.push',
+          'for(let i=0;i<18;i++){const tr=trees[i%trees.length];vines.push':'for(let i=0;i<10;i++){const tr=trees[i%trees.length];vines.push'
+          }
+          for a,b in repl.items(): s=s.replace(a,b)
+          s=s.replace('function sphereMesh(seg=16,ring=10)','function sphereMesh(seg=10,ring=6)')
+          s=s.replace('function coneMesh(seg=18)','function coneMesh(seg=10)')
+          s=re.sub(r'function obj\(mesh,x,y,z,sx,sy,sz,col,yaw=0,pitch=0,alpha=1\)\{.*?draw\(mesh,m,col,alpha\)\}',
+          'function obj(mesh,x,y,z,sx,sy,sz,col,yaw=0,pitch=0,alpha=1){const big=Math.max(sx,sy,sz),d2=(x-px)*(x-px)+(z-pz)*(z-pz);if(big<.42&&d2>300)return;if(big<1.05&&d2>850)return;if(quality<.86&&big<.9&&d2>260)return;if(drawCount++>620&&big<1.7)return;let m=I();m=tr(m,x,y,z);m=ry(m,yaw);m=rx(m,pitch);m=sc(m,sx,sy,sz);draw(mesh,m,col,alpha)}',s)
+          s=re.sub(r'function resize\(\)\{const d=Math\.min\(devicePixelRatio,innerWidth<900\?1\.45:1\.8\);canvas\.width=Math\.floor\(innerWidth\*d\);canvas\.height=Math\.floor\(innerHeight\*d\);canvas\.style\.width=innerWidth\+"px";canvas\.style\.height=innerHeight\+"px"\}',
+          'function resize(){const d=Math.min(devicePixelRatio,innerWidth<900?1.12:1.45);canvas.width=Math.floor(innerWidth*d);canvas.height=Math.floor(innerHeight*d);canvas.style.width=innerWidth+"px";canvas.style.height=innerHeight+"px"}',s)
+          s=s.replace('for(const cl of clouds)obj(M.sphere,cl[0]+Math.sin(t*.08+cl[4])*3,cl[1],cl[2]+Math.cos(t*.07+cl[4])*2,cl[3],.35,cl[3]*.55,[.92,.96,.95],0,0,.20);',
+          'for(let i=-3;i<=3;i++)obj(M.sphere,i*15,hgt(i*15,-8)-.015,-8+Math.sin(i)*4,3.6,.035,2.4,[.17,.38,.29],0,0,.34);for(const cl of clouds)obj(M.sphere,cl[0]+Math.sin(t*.08+cl[4])*3,cl[1],cl[2]+Math.cos(t*.07+cl[4])*2,cl[3],.35,cl[3]*.55,[.92,.96,.95],0,0,.20);')
+          s=s.replace('quality=fps<42?.72:fps>54?1:quality;','quality=fps<36?.58:fps<48?.76:fps>55?1:quality;')
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js')
+          if sw.exists(): sw.write_text(re.sub(r'ikimono-hunt-v\d+','ikimono-hunt-v28',sw.read_text(encoding='utf-8')),encoding='utf-8')
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          git add index.html sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Apply v28 lite realism"
+          git push origin HEAD:main

@@ -1,4 +1,4 @@
-const CACHE_NAME = "ikimono-hunt-v23";
+const CACHE_NAME = "ikimono-hunt-v24";
 const LOCAL_ASSETS = [
   "./",
   "./index.html",

@@ -1,0 +1,45 @@
+name: Apply v26 realism layer
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-v26-realism-layer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('movePower=0;','movePower=0,stepTick=0;')
+          s=s.replace('fireflies=[],reeds=[],mushrooms=[],leaves=[],mist=[];','fireflies=[],reeds=[],mushrooms=[],leaves=[],mist=[],clouds=[],shells=[],spores=[],vines=[],tracks=[];')
+          add='''for(let i=0;i<14;i++)clouds.push([Math.sin(i*2.8)*60,13+((i*3)%5),Math.cos(i*3.6)*60,5+((i*7)%5),i*.37]);\nfor(let i=0;i<34;i++){const w=waters[i%waters.length],a=i*.78,d=(w[2]||10)*(.55+((i*5)%8)/14);shells.push([w[0]+Math.cos(a)*d,w[1]+Math.sin(a)*d,i*.4])}\nfor(let i=0;i<28;i++)spores.push([Math.sin(i*6.2)*42,1+((i*9)%8)/5,Math.cos(i*3.9)*42,i*.55]);\nfor(let i=0;i<18;i++){const tr=trees[i%trees.length];vines.push([tr[0],tr[1],tr[2],i*.61])}'''
+          if 'clouds.push' not in s:
+            s=s.replace('for(let i=0;i<10;i++)mist.push([Math.sin(i*3.1)*36,.75+((i*4)%8)/12,Math.cos(i*4.4)*36,4+((i*5)%5),i*.9]);','for(let i=0;i<10;i++)mist.push([Math.sin(i*3.1)*36,.75+((i*4)%8)/12,Math.cos(i*4.4)*36,4+((i*5)%5),i*.9]);\n'+add)
+          layer='''const oldCreature=creature;creature=function(a,x,z,y,s=1,yaw=dir,t=0){oldCreature(a,x,z,y,s,yaw,t);const c=a.color,ac=a.accent,front=[Math.sin(yaw),Math.cos(yaw)],side=[Math.cos(yaw),-Math.sin(yaw)],at=(lx,lz)=>[x+side[0]*lx*s+front[0]*lz*s,z+side[1]*lx*s+front[1]*lz*s],bob=Math.sin(t*3+yaw)*.035*s;obj(M.sphere,x,y+.60*s+bob,z+.18*s,.36*s,.08*s,.42*s,[Math.min(c[0]+.18,1),Math.min(c[1]+.16,1),Math.min(c[2]+.12,1)],yaw,0,.72);for(let i=-2;i<=2;i++){const q=at(i*.16,.05+Math.sin(i+t)*.08);obj(M.sphere,q[0],y+.98*s+bob,q[1],.035*s,.025*s,.035*s,ac,yaw,0,.68)}if(a.kind==="water"||a.kind==="crystal")obj(M.sphere,x,y+.9*s+bob,z,.42*s,.08*s,.5*s,[.92,1,1],yaw,0,.22);if(a.kind==="wing")for(const lx of[-.46,.46]){const q=at(lx,.12);obj(M.sphere,q[0],y+.9*s+bob,q[1],.07*s,.025*s,.07*s,[.98,.96,.75],yaw,0,.75)}obj(M.sphere,x+Math.sin(yaw)*.54*s-.10*Math.cos(yaw)*s,y+1.10*s+bob,z+Math.cos(yaw)*.54*s+.10*Math.sin(yaw)*s,.012*s,.012*s,.012*s,[1,1,.9],0);obj(M.sphere,x+Math.sin(yaw)*.54*s+.10*Math.cos(yaw)*s,y+1.10*s+bob,z+Math.cos(yaw)*.54*s-.10*Math.sin(yaw)*s,.012*s,.012*s,.012*s,[1,1,.9],0)};\nconst oldWorld=world;world=function(t){oldWorld(t);gl.uniform3f(loc.light,-.35+.12*Math.sin(t*.1),.9,.45+.10*Math.cos(t*.13));for(let i=-4;i<=4;i++)obj(M.cone,i*18,5.5,-64,9,7,9,[.20,.39,.38],0,0,.42);for(const cl of clouds)obj(M.sphere,cl[0]+Math.sin(t*.08+cl[4])*3,cl[1],cl[2]+Math.cos(t*.07+cl[4])*2,cl[3],.35,cl[3]*.55,[.92,.96,.95],0,0,.20);for(const sh of shells)obj(M.sphere,sh[0],hgt(sh[0],sh[1])+.07,sh[1],.18,.035,.10,[.92,.82,.66],sh[2],0,.78);for(const r of rocks)obj(M.sphere,r[0]-.45,hgt(r[0],r[1])+.72,r[1]+.2,.32,.035,.25,[.18,.45,.26],.3,0,.72);for(const v of vines){const x=v[0]+Math.sin(t+v[3])*.12,z=v[1]+Math.cos(t+v[3])*.12;obj(M.box,x,hgt(v[0],v[1])+1.35*v[2],z,.035*v[2],.85*v[2],.035*v[2],[.14,.36,.20],v[3])}for(const sp of spores)obj(M.sphere,sp[0]+Math.sin(t*.5+sp[3])*.7,sp[1]+Math.sin(t*.9+sp[3])*.25,sp[2]+Math.cos(t*.6+sp[3])*.7,.045,.045,.045,[.75,1,.92],0,0,.42);for(const trk of tracks)obj(M.sphere,trk[0],hgt(trk[0],trk[1])+.035,trk[1],.20,.018,.10,[.18,.24,.18],trk[2],0,.28)};\nconst oldUpdate=update;update=function(dt){oldUpdate(dt);if(movePower>.25&&++stepTick%10===0){tracks.push([px-Math.sin(dir)*.55,pz-Math.cos(dir)*.55,dir]);if(tracks.length>28)tracks.shift()}};\n'''
+          if 'oldCreature=creature' not in s:
+            s=s.replace('if(active!=="kid"&&!found.has(active))active="kid";',layer+'if(active!=="kid"&&!found.has(active))active="kid";')
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js')
+          if sw.exists(): sw.write_text(re.sub(r'ikimono-hunt-v\d+','ikimono-hunt-v26',sw.read_text(encoding='utf-8')),encoding='utf-8')
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          git add index.html sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Apply v26 realism layer"
+          git push origin HEAD:main

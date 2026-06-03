@@ -1,0 +1,109 @@
+name: Apply v32 focused quality
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-v32-focused-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          # Start from the stable light shader, with slightly richer color but no expensive grain/pow.
+          s=re.sub(r'const vs=`attribute vec3 p,n;.*?`;\nconst fs=`precision mediump float;.*?`;',
+          'const vs=`attribute vec3 p,n;uniform mat4 m,vp;uniform vec3 col,light;varying vec3 c;varying float fog;void main(){vec4 w=m*vec4(p,1.);vec3 nn=normalize(mat3(m)*n);float d=max(dot(nn,normalize(light)),0.);float h=.20*max(nn.y,0.);float side=.08*(1.-abs(nn.y));c=col*(.36+d*.68+h+side)+vec3(.035,.052,.048);gl_Position=vp*w;fog=clamp((gl_Position.z/gl_Position.w-18.)/44.,0.,1.);}`;\nconst fs=`precision mediump float;varying vec3 c;varying float fog;uniform float alpha;void main(){vec3 sky=vec3(.58,.72,.76);vec3 cc=mix(c,sky,fog);gl_FragColor=vec4(cc,alpha);}`;',s,flags=re.S)
+          # Keep performance guardrails, but raise phone resolution a bit from v31 because v31 looked too blurry.
+          pairs={
+          'for(let i=0;i<38;i++)trees.push':'for(let i=0;i<22;i++)trees.push',
+          'for(let i=0;i<28;i++)trees.push':'for(let i=0;i<22;i++)trees.push',
+          'for(let i=0;i<90;i++){const x=Math.sin(i*9.7)*52':'for(let i=0;i<28;i++){const x=Math.sin(i*9.7)*52',
+          'for(let i=0;i<42;i++){const x=Math.sin(i*9.7)*52':'for(let i=0;i<28;i++){const x=Math.sin(i*9.7)*52',
+          'for(let i=0;i<38;i++)flowers.push':'for(let i=0;i<12;i++)flowers.push',
+          'for(let i=0;i<20;i++)flowers.push':'for(let i=0;i<12;i++)flowers.push',
+          'for(let i=0;i<52;i++)pebbles.push':'for(let i=0;i<12;i++)pebbles.push',
+          'for(let i=0;i<22;i++)pebbles.push':'for(let i=0;i<12;i++)pebbles.push',
+          'for(let i=0;i<24;i++)fireflies.push':'for(let i=0;i<8;i++)fireflies.push',
+          'for(let i=0;i<12;i++)fireflies.push':'for(let i=0;i<8;i++)fireflies.push',
+          'for(let i=0;i<46;i++){const w=waters[i%waters.length],a=i*.61':'for(let i=0;i<12;i++){const w=waters[i%waters.length],a=i*.61',
+          'for(let i=0;i<22;i++){const w=waters[i%waters.length],a=i*.61':'for(let i=0;i<12;i++){const w=waters[i%waters.length],a=i*.61',
+          'for(let i=0;i<24;i++)mushrooms.push':'for(let i=0;i<8;i++)mushrooms.push',
+          'for(let i=0;i<14;i++)mushrooms.push':'for(let i=0;i<8;i++)mushrooms.push',
+          'for(let i=0;i<42;i++)leaves.push':'for(let i=0;i<10;i++)leaves.push',
+          'for(let i=0;i<18;i++)leaves.push':'for(let i=0;i<10;i++)leaves.push',
+          'for(let i=0;i<10;i++)mist.push':'for(let i=0;i<5;i++)mist.push',
+          'for(let i=0;i<14;i++)clouds.push':'for(let i=0;i<5;i++)clouds.push',
+          'for(let i=0;i<8;i++)clouds.push':'for(let i=0;i<5;i++)clouds.push',
+          'for(let i=0;i<34;i++){const w=waters[i%waters.length],a=i*.78':'for(let i=0;i<8;i++){const w=waters[i%waters.length],a=i*.78',
+          'for(let i=0;i<16;i++){const w=waters[i%waters.length],a=i*.78':'for(let i=0;i<8;i++){const w=waters[i%waters.length],a=i*.78',
+          'for(let i=0;i<28;i++)spores.push':'for(let i=0;i<6;i++)spores.push',
+          'for(let i=0;i<12;i++)spores.push':'for(let i=0;i<6;i++)spores.push',
+          'for(let i=0;i<18;i++){const tr=trees[i%trees.length];vines.push':'for(let i=0;i<6;i++){const tr=trees[i%trees.length];vines.push',
+          'for(let i=0;i<10;i++){const tr=trees[i%trees.length];vines.push':'for(let i=0;i<6;i++){const tr=trees[i%trees.length];vines.push',
+          'function sphereMesh(seg=16,ring=10)':'function sphereMesh(seg=8,ring=5)',
+          'function sphereMesh(seg=10,ring=6)':'function sphereMesh(seg=8,ring=5)',
+          'function sphereMesh(seg=8,ring=5)':'function sphereMesh(seg=8,ring=5)',
+          'function sphereMesh(seg=7,ring=4)':'function sphereMesh(seg=8,ring=5)',
+          'function coneMesh(seg=18)':'function coneMesh(seg=8)',
+          'function coneMesh(seg=10)':'function coneMesh(seg=8)',
+          'function coneMesh(seg=8)':'function coneMesh(seg=8)',
+          'function coneMesh(seg=7)':'function coneMesh(seg=8)',
+          'innerWidth<900?1.45:1.8':'innerWidth<900?.86:1.15',
+          'innerWidth<900?1.12:1.45':'innerWidth<900?.86:1.15',
+          'innerWidth<900?0.92:1.25':'innerWidth<900?.86:1.15',
+          'innerWidth<900?.72:1.0':'innerWidth<900?.86:1.15',
+          'if(tracks.length>28)tracks.shift()':'if(tracks.length>6)tracks.shift()',
+          'if(tracks.length>10)tracks.shift()':'if(tracks.length>6)tracks.shift()'
+          }
+          for a,b in pairs.items(): s=s.replace(a,b)
+          # Add smooth/fine meshes only for focused close-up quality.
+          s=s.replace('const M={box:boxMesh(),sphere:sphereMesh(),cone:coneMesh()};', 'const M={box:boxMesh(),sphere:sphereMesh(),cone:coneMesh(),smooth:sphereMesh(14,8),fineCone:coneMesh(14)};')
+          s=re.sub(r'function obj\(mesh,x,y,z,sx,sy,sz,col,yaw=0,pitch=0,alpha=1\)\{.*?draw\(mesh,m,col,alpha\)\}',
+          'function obj(mesh,x,y,z,sx,sy,sz,col,yaw=0,pitch=0,alpha=1){const big=Math.max(sx,sy,sz),d2=(x-px)*(x-px)+(z-pz)*(z-pz);if(big<.5&&d2>160)return;if(big<1.2&&d2>420)return;if(quality<.9&&big<1.1&&d2>140)return;if(drawCount++>360&&big<2.2)return;let m=I();m=tr(m,x,y,z);m=ry(m,yaw);m=rx(m,pitch);m=sc(m,sx,sy,sz);draw(mesh,m,col,alpha)}',s)
+          # Hide uncollected creatures sooner; nearby discoveries keep full form.
+          old='for(const a of animals)if(!found.has(a.id))creature(a,a.x,a.z,hgt(a.x,a.z)+.1,.62+Math.sin(t*2+a.bob)*.03,Math.sin(t+a.bob)*.2,t);'
+          new='for(const a of animals)if(!found.has(a.id)){const dd=Math.hypot(px-a.x,pz-a.z);if(dd<16)creature(a,a.x,a.z,hgt(a.x,a.z)+.1,.62+Math.sin(t*2+a.bob)*.03,Math.sin(t+a.bob)*.2,t);else if(dd<26){shade(a.x,a.z,.28);obj(M.cone,a.x,hgt(a.x,a.z)+.5,a.z,.14,.38,.14,a.accent,0,0,.35)}}'
+          s=s.replace(old,new)
+          s=re.sub(r'if\(dd<22\)creature\(a,a\.x,a\.z,hgt\(a\.x,a\.z\)\+\.1,\.62\+Math\.sin\(t\*2\+a\.bob\)\*\.03,Math\.sin\(t\+a\.bob\)\*\.2,t\);else if\(dd<32\)',
+          'if(dd<16)creature(a,a.x,a.z,hgt(a.x,a.z)+.1,.62+Math.sin(t*2+a.bob)*.03,Math.sin(t+a.bob)*.2,t);else if(dd<26)',s)
+          s=re.sub(r'if\(dd<14\)creature\(a,a\.x,a\.z,hgt\(a\.x,a\.z\)\+\.1,\.62\+Math\.sin\(t\*2\+a\.bob\)\*\.03,Math\.sin\(t\+a\.bob\)\*\.2,t\);else if\(dd<24\)',
+          'if(dd<16)creature(a,a.x,a.z,hgt(a.x,a.z)+.1,.62+Math.sin(t*2+a.bob)*.03,Math.sin(t+a.bob)*.2,t);else if(dd<26)',s)
+          # Focused material overlay: close/player only, using smooth mesh for better perceived quality.
+          mat='''\nconst baseCreature=creature;creature=function(a,x,z,y,s=1,yaw=dir,t=0){baseCreature(a,x,z,y,s,yaw,t);const close=Math.hypot(x-px,z-pz)<3.2||x===px;if(!close||quality<.72)return;const c=a.color,ac=a.accent,bob=Math.sin(t*3+yaw)*.035*s;obj(M.smooth,x,y+.72*s+bob,z,.50*s,.36*s,.60*s,[Math.min(c[0]+.10,1),Math.min(c[1]+.10,1),Math.min(c[2]+.10,1)],yaw,0,.34);obj(M.smooth,x,y+.58*s+bob,z+.16*s,.34*s,.07*s,.40*s,[Math.min(c[0]+.24,1),Math.min(c[1]+.20,1),Math.min(c[2]+.16,1)],yaw,0,.55);if(a.kind==="water"||a.kind==="crystal")obj(M.smooth,x,y+.92*s+bob,z,.40*s,.055*s,.48*s,[.92,1,1],yaw,0,.26);if(a.kind==="armor"||a.kind==="rock")for(let i=-2;i<=2;i++)obj(M.fineCone,x+i*.12*s,y+1.18*s+bob,z-.2*s,.045*s,.18*s,.045*s,ac,yaw);obj(M.smooth,x+Math.sin(yaw)*.55*s-.11*Math.cos(yaw)*s,y+1.11*s+bob,z+Math.cos(yaw)*.55*s+.11*Math.sin(yaw)*s,.018*s,.018*s,.018*s,[1,1,.92],0);obj(M.smooth,x+Math.sin(yaw)*.55*s+.11*Math.cos(yaw)*s,y+1.11*s+bob,z+Math.cos(yaw)*.55*s-.11*Math.sin(yaw)*s,.018*s,.018*s,.018*s,[1,1,.92],0)};\n'''
+          if 'baseCreature=creature' not in s:
+            s=s.replace('const oldCreature=creature;', mat+'const oldCreature=creature;') if 'const oldCreature=creature;' in s else s.replace('function world(t){', mat+'function world(t){')
+          # Keep oldCreature overlay from older versions, but make it close/player only.
+          s=s.replace('oldCreature(a,x,z,y,s,yaw,t);const c=a.color','oldCreature(a,x,z,y,s,yaw,t);if(quality<.9&&Math.hypot(x-px,z-pz)>3.2)return;const c=a.color')
+          s=s.replace('oldCreature(a,x,z,y,s,yaw,t);if(quality<.9&&Math.hypot(x-px,z-pz)>4)return;const c=a.color','oldCreature(a,x,z,y,s,yaw,t);if(quality<.9&&Math.hypot(x-px,z-pz)>3.2)return;const c=a.color')
+          s=s.replace('oldCreature(a,x,z,y,s,yaw,t);if(quality<1||Math.hypot(x-px,z-pz)>2.2)return;const c=a.color','oldCreature(a,x,z,y,s,yaw,t);if(quality<.9&&Math.hypot(x-px,z-pz)>3.2)return;const c=a.color')
+          s=s.replace('quality=fps<42?.72:fps>54?1:quality;','quality=fps<34?.50:fps<48?.72:fps>55?1:quality;')
+          s=s.replace('quality=fps<36?.58:fps<48?.76:fps>55?1:quality;','quality=fps<34?.50:fps<48?.72:fps>55?1:quality;')
+          s=s.replace('quality=fps<34?.45:fps<48?.68:fps>55?1:quality;','quality=fps<34?.50:fps<48?.72:fps>55?1:quality;')
+          # Remove duplicate loops if present.
+          s=s.replace('for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++)if((i+j*j)%4===0)obj(M.sphere,i*9,hgt(i*9,j*9)+.01,j*9,2.7,.025,2.2,[.18+.02*(i%2),.43+.04*(j%2),.32],0,0,.28);for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++)if((i+j*j)%4===0)obj(M.sphere,i*9,hgt(i*9,j*9)+.01,j*9,2.7,.025,2.2,[.18+.02*(i%2),.43+.04*(j%2),.32],0,0,.28);','for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++)if((i+j*j)%4===0)obj(M.sphere,i*9,hgt(i*9,j*9)+.01,j*9,2.7,.025,2.2,[.18+.02*(i%2),.43+.04*(j%2),.32],0,0,.28);')
+          s=s.replace('for(const rd of reeds)obj(M.cone,rd[0],hgt(rd[0],rd[1])+.38,rd[1],.07,.62*rd[2],.07,[.16,.43,.25],rd[3]+Math.sin(t+rd[0])*.12);for(const lf of leaves)obj(M.sphere,lf[0],hgt(lf[0],lf[1])+.045,lf[1],.28,.018,.12,[.64,.40,.20],lf[2]);for(const rd of reeds)obj(M.cone,rd[0],hgt(rd[0],rd[1])+.38,rd[1],.07,.62*rd[2],.07,[.16,.43,.25],rd[3]+Math.sin(t+rd[0])*.12);for(const lf of leaves)obj(M.sphere,lf[0],hgt(lf[0],lf[1])+.045,lf[1],.28,.018,.12,[.64,.40,.20],lf[2]);','for(const rd of reeds)obj(M.cone,rd[0],hgt(rd[0],rd[1])+.38,rd[1],.07,.62*rd[2],.07,[.16,.43,.25],rd[3]+Math.sin(t+rd[0])*.12);for(const lf of leaves)obj(M.sphere,lf[0],hgt(lf[0],lf[1])+.045,lf[1],.28,.018,.12,[.64,.40,.20],lf[2]);')
+          sw=Path('sw.js')
+          p.write_text(s,encoding='utf-8')
+          if sw.exists(): sw.write_text(re.sub(r'ikimono-hunt-v\d+','ikimono-hunt-v32',sw.read_text(encoding='utf-8')),encoding='utf-8')
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          git add index.html sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Apply v32 focused quality"
+          git push origin HEAD:main

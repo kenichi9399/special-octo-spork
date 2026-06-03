@@ -53,7 +53,7 @@ jobs:
           new='for(const a of animals)if(!found.has(a.id)){const dd=Math.hypot(px-a.x,pz-a.z);if(dd<22)creature(a,a.x,a.z,hgt(a.x,a.z)+.1,.62+Math.sin(t*2+a.bob)*.03,Math.sin(t+a.bob)*.2,t);else if(dd<32){shade(a.x,a.z,.32);obj(M.cone,a.x,hgt(a.x,a.z)+.55,a.z,.16,.46,.16,a.accent,0,0,.42)}}'
           s=s.replace(old,new)
           s=s.replace('oldCreature(a,x,z,y,s,yaw,t);const c=a.color','oldCreature(a,x,z,y,s,yaw,t);if(quality<.9&&Math.hypot(x-px,z-pz)>4)return;const c=a.color')
-          s=s.replace('quality=fps<42?.72:fps>54?1:quality;','quality=fps<36?.58:fps<48?.76:fps>55?1:quality;')
+          s=s.replace('quality=fps<42?.72:fps>54?1:quality;','quality=fps<34?.50:fps<48?.72:fps>55?1:quality;')
           s=s.replace('quality=fps<36?.58:fps<48?.76:fps>55?1:quality;','quality=fps<34?.50:fps<48?.72:fps>55?1:quality;')
           p.write_text(s,encoding='utf-8')
           sw=Path('sw.js')
@@ -67,3 +67,5 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m "Apply v29 hidden lite"
           git push origin HEAD:main
+
+# retrigger 2

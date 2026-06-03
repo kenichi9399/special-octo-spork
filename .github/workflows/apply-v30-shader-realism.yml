@@ -1,0 +1,78 @@
+name: Apply v30 shader realism
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-v30-shader-realism.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old_vs='const vs=`attribute vec3 p,n;uniform mat4 m,vp;uniform vec3 col,light;varying vec3 c;varying float fog;void main(){vec4 w=m*vec4(p,1.);vec3 nn=normalize(mat3(m)*n);float d=max(dot(nn,normalize(light)),0.);c=col*(.36+d*.72)+vec3(.05,.07,.08);gl_Position=vp*w;fog=clamp((gl_Position.z/gl_Position.w-18.)/46.,0.,1.);}`;'
+          new_vs='const vs=`attribute vec3 p,n;uniform mat4 m,vp;uniform vec3 col,light;varying vec3 c;varying float fog;varying float grain;void main(){vec4 w=m*vec4(p,1.);vec3 nn=normalize(mat3(m)*n);vec3 l=normalize(light);float d=max(dot(nn,l),0.);float hemi=.45+.35*max(nn.y,0.);float rim=pow(1.-max(abs(nn.z),0.),2.)*.12;float low=clamp(1.-w.y*.08,0.,1.)*.08;c=col*(.30+d*.78+hemi*.22+rim)+vec3(.035,.05,.045)+low*vec3(.03,.025,.018);gl_Position=vp*w;fog=clamp((gl_Position.z/gl_Position.w-16.)/42.,0.,1.);grain=fract(sin(dot(w.xz,vec2(12.9898,78.233)))*43758.5453);}`;'
+          old_fs='const fs=`precision mediump float;varying vec3 c;varying float fog;uniform float alpha;void main(){vec3 sky=vec3(.55,.70,.78);gl_FragColor=vec4(mix(c,sky,fog),alpha);}`;'
+          new_fs='const fs=`precision mediump float;varying vec3 c;varying float fog;varying float grain;uniform float alpha;void main(){vec3 sky=mix(vec3(.48,.66,.72),vec3(.70,.78,.82),clamp(fog,0.,1.));vec3 cc=mix(c,sky,fog);cc=pow(max(cc,0.),vec3(.92));cc+=(grain-.5)*.025*(1.-fog);gl_FragColor=vec4(cc,alpha);}`;'
+          s=s.replace(old_vs,new_vs).replace(old_fs,new_fs)
+          # Keep prior performance patches if workflow runs from older main.
+          pairs={
+          'for(let i=0;i<38;i++)trees.push':'for(let i=0;i<28;i++)trees.push',
+          'for(let i=0;i<90;i++){const x=Math.sin(i*9.7)*52':'for(let i=0;i<42;i++){const x=Math.sin(i*9.7)*52',
+          'for(let i=0;i<38;i++)flowers.push':'for(let i=0;i<20;i++)flowers.push',
+          'for(let i=0;i<52;i++)pebbles.push':'for(let i=0;i<22;i++)pebbles.push',
+          'for(let i=0;i<24;i++)fireflies.push':'for(let i=0;i<12;i++)fireflies.push',
+          'for(let i=0;i<46;i++){const w=waters[i%waters.length],a=i*.61':'for(let i=0;i<22;i++){const w=waters[i%waters.length],a=i*.61',
+          'for(let i=0;i<24;i++)mushrooms.push':'for(let i=0;i<14;i++)mushrooms.push',
+          'for(let i=0;i<42;i++)leaves.push':'for(let i=0;i<18;i++)leaves.push',
+          'for(let i=0;i<14;i++)clouds.push':'for(let i=0;i<8;i++)clouds.push',
+          'for(let i=0;i<34;i++){const w=waters[i%waters.length],a=i*.78':'for(let i=0;i<16;i++){const w=waters[i%waters.length],a=i*.78',
+          'for(let i=0;i<28;i++)spores.push':'for(let i=0;i<12;i++)spores.push',
+          'for(let i=0;i<18;i++){const tr=trees[i%trees.length];vines.push':'for(let i=0;i<10;i++){const tr=trees[i%trees.length];vines.push',
+          'function sphereMesh(seg=16,ring=10)':'function sphereMesh(seg=8,ring=5)',
+          'function sphereMesh(seg=10,ring=6)':'function sphereMesh(seg=8,ring=5)',
+          'function coneMesh(seg=18)':'function coneMesh(seg=8)',
+          'function coneMesh(seg=10)':'function coneMesh(seg=8)',
+          'for(let i=-6;i<=6;i++)for(let j=-6;j<=6;j++)if((i*i+j*j)%5===0)':'for(let i=-4;i<=4;i++)for(let j=-4;j<=4;j++)if((i*i+j*j)%5===0)',
+          'for(let i=-5;i<=5;i++)for(let j=-5;j<=5;j++)if((i+j*j)%4===0)':'for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++)if((i+j*j)%4===0)',
+          'innerWidth<900?1.45:1.8':'innerWidth<900?0.92:1.25',
+          'innerWidth<900?1.12:1.45':'innerWidth<900?0.92:1.25',
+          'if(tracks.length>28)tracks.shift()':'if(tracks.length>10)tracks.shift()'
+          }
+          for a,b in pairs.items(): s=s.replace(a,b)
+          s=re.sub(r'function obj\(mesh,x,y,z,sx,sy,sz,col,yaw=0,pitch=0,alpha=1\)\{.*?draw\(mesh,m,col,alpha\)\}',
+          'function obj(mesh,x,y,z,sx,sy,sz,col,yaw=0,pitch=0,alpha=1){const big=Math.max(sx,sy,sz),d2=(x-px)*(x-px)+(z-pz)*(z-pz);if(big<.42&&d2>240)return;if(big<1.05&&d2>650)return;if(quality<.86&&big<.9&&d2>200)return;if(drawCount++>420&&big<1.9)return;let m=I();m=tr(m,x,y,z);m=ry(m,yaw);m=rx(m,pitch);m=sc(m,sx,sy,sz);draw(mesh,m,col,alpha)}',s)
+          old='for(const a of animals)if(!found.has(a.id))creature(a,a.x,a.z,hgt(a.x,a.z)+.1,.62+Math.sin(t*2+a.bob)*.03,Math.sin(t+a.bob)*.2,t);'
+          new='for(const a of animals)if(!found.has(a.id)){const dd=Math.hypot(px-a.x,pz-a.z);if(dd<22)creature(a,a.x,a.z,hgt(a.x,a.z)+.1,.62+Math.sin(t*2+a.bob)*.03,Math.sin(t+a.bob)*.2,t);else if(dd<32){shade(a.x,a.z,.32);obj(M.cone,a.x,hgt(a.x,a.z)+.55,a.z,.16,.46,.16,a.accent,0,0,.42)}}'
+          s=s.replace(old,new)
+          s=s.replace('oldCreature(a,x,z,y,s,yaw,t);const c=a.color','oldCreature(a,x,z,y,s,yaw,t);if(quality<.9&&Math.hypot(x-px,z-pz)>4)return;const c=a.color')
+          s=s.replace('quality=fps<42?.72:fps>54?1:quality;','quality=fps<34?.50:fps<48?.72:fps>55?1:quality;')
+          s=s.replace('quality=fps<36?.58:fps<48?.76:fps>55?1:quality;','quality=fps<34?.50:fps<48?.72:fps>55?1:quality;')
+          # Remove accidental duplicated mid-ground / reeds / leaves loops left from older patches.
+          s=s.replace('for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++)if((i+j*j)%4===0)obj(M.sphere,i*9,hgt(i*9,j*9)+.01,j*9,2.7,.025,2.2,[.18+.02*(i%2),.43+.04*(j%2),.32],0,0,.28);for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++)if((i+j*j)%4===0)obj(M.sphere,i*9,hgt(i*9,j*9)+.01,j*9,2.7,.025,2.2,[.18+.02*(i%2),.43+.04*(j%2),.32],0,0,.28);','for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++)if((i+j*j)%4===0)obj(M.sphere,i*9,hgt(i*9,j*9)+.01,j*9,2.7,.025,2.2,[.18+.02*(i%2),.43+.04*(j%2),.32],0,0,.28);')
+          s=s.replace('for(const rd of reeds)obj(M.cone,rd[0],hgt(rd[0],rd[1])+.38,rd[1],.07,.62*rd[2],.07,[.16,.43,.25],rd[3]+Math.sin(t+rd[0])*.12);for(const lf of leaves)obj(M.sphere,lf[0],hgt(lf[0],lf[1])+.045,lf[1],.28,.018,.12,[.64,.40,.20],lf[2]);for(const rd of reeds)obj(M.cone,rd[0],hgt(rd[0],rd[1])+.38,rd[1],.07,.62*rd[2],.07,[.16,.43,.25],rd[3]+Math.sin(t+rd[0])*.12);for(const lf of leaves)obj(M.sphere,lf[0],hgt(lf[0],lf[1])+.045,lf[1],.28,.018,.12,[.64,.40,.20],lf[2]);','for(const rd of reeds)obj(M.cone,rd[0],hgt(rd[0],rd[1])+.38,rd[1],.07,.62*rd[2],.07,[.16,.43,.25],rd[3]+Math.sin(t+rd[0])*.12);for(const lf of leaves)obj(M.sphere,lf[0],hgt(lf[0],lf[1])+.045,lf[1],.28,.018,.12,[.64,.40,.20],lf[2]);')
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js')
+          if sw.exists(): sw.write_text(re.sub(r'ikimono-hunt-v\d+','ikimono-hunt-v30',sw.read_text(encoding='utf-8')),encoding='utf-8')
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          git add index.html sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Apply v30 shader realism"
+          git push origin HEAD:main

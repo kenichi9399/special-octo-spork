@@ -1,0 +1,136 @@
+name: apply-v33-quality-cleanup
+on:
+  push:
+    paths:
+      - .github/workflows/apply-v33-quality-cleanup.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: apply v33 quality cleanup
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          # remove one duplicated nature-population block left by earlier tuning
+          dup = '''for(let i=0;i<12;i++){const w=waters[i%waters.length],a=i*.61,d=(w[2]||10)*(.75+((i*7)%9)/30);reeds.push([w[0]+Math.cos(a)*d,w[1]+Math.sin(a)*d,.65+((i*5)%8)/10,a])}
+for(let i=0;i<8;i++)mushrooms.push([Math.sin(i*8.6)*42,Math.cos(i*5.8)*42,.4+((i*3)%7)/15,i%2]);
+for(let i=0;i<10;i++)leaves.push([Math.sin(i*4.2)*50,Math.cos(i*9.5)*50,i*.4]);
+for(let i=0;i<5;i++)mist.push([Math.sin(i*3.1)*36,.75+((i*4)%8)/12,Math.cos(i*4.4)*36,4+((i*5)%5),i*.9]);
+for(let i=0;i<5;i++)clouds.push([Math.sin(i*2.8)*60,13+((i*3)%5),Math.cos(i*3.6)*60,5+((i*7)%5),i*.37]);
+for(let i=0;i<8;i++){const w=waters[i%waters.length],a=i*.78,d=(w[2]||10)*(.55+((i*5)%8)/14);shells.push([w[0]+Math.cos(a)*d,w[1]+Math.sin(a)*d,i*.4])}
+for(let i=0;i<6;i++)spores.push([Math.sin(i*6.2)*42,1+((i*9)%8)/5,Math.cos(i*3.9)*42,i*.55]);
+for(let i=0;i<6;i++){const tr=trees[i%trees.length];vines.push([tr[0],tr[1],tr[2],i*.61])}
+'''
+          first = s.find(dup)
+          second = s.find(dup, first + 1) if first != -1 else -1
+          if second != -1:
+              s = s[:second] + s[second+len(dup):]
+
+          # slightly cleaner detail meshes without making the whole world expensive
+          s = s.replace('const M={box:boxMesh(),sphere:sphereMesh(),cone:coneMesh(),smooth:sphereMesh(14,8),fineCone:coneMesh(14)};',
+                        'const M={box:boxMesh(),sphere:sphereMesh(),cone:coneMesh(),smooth:sphereMesh(16,9),detail:sphereMesh(10,6),fineCone:coneMesh(14)};')
+
+          # keep draw budget controlled after removing duplicate nature pieces
+          s = s.replace('if(drawCount++>360&&big<2.2)return;', 'if(drawCount++>320&&big<2.2)return;')
+
+          start = s.find('const baseCreature=creature;')
+          end = s.find('const oldWorld=world;', start)
+          if start == -1 or end == -1:
+              raise SystemExit('creature wrapper range not found')
+          creature_block = r'''
+const baseCreature=creature;
+creature=function(a,x,z,y,s=1,yaw=dir,t=0){
+  baseCreature(a,x,z,y,s,yaw,t);
+  const isPlayer=Math.abs(x-px)<.001&&Math.abs(z-pz)<.001;
+  const d=Math.hypot(x-px,z-pz);
+  const close=isPlayer||d<4.2;
+  if(!close||quality<.68)return;
+  const c=a.color||[.29,.65,.78],ac=a.accent||[1,.8,.62],kind=a.kind||"kid";
+  const bob=Math.sin(t*3+yaw)*.035*s;
+  const front=[Math.sin(yaw),Math.cos(yaw)],side=[Math.cos(yaw),-Math.sin(yaw)];
+  const at=(lx,lz)=>[x+side[0]*lx*s+front[0]*lz*s,z+side[1]*lx*s+front[1]*lz*s];
+  const lift=y+bob;
+  const brighten=(arr,k)=>arr.map(v=>Math.min(1,v+k));
+  // close-up material layer: rounder body, soft belly, and a tiny eye catchlight
+  obj(M.smooth,x,lift+.72*s,z,.50*s,.36*s,.60*s,brighten(c,.09),yaw,0,.30);
+  obj(M.detail,x,lift+.58*s,z+.18*s,.34*s,.07*s,.40*s,brighten(c,.22),yaw,0,.58);
+  obj(M.detail,x+Math.sin(yaw)*.55*s-.11*Math.cos(yaw)*s,lift+1.11*s,z+Math.cos(yaw)*.55*s+.11*Math.sin(yaw)*s,.018*s,.018*s,.018*s,[1,1,.92],0);
+  obj(M.detail,x+Math.sin(yaw)*.55*s+.11*Math.cos(yaw)*s,lift+1.11*s,z+Math.cos(yaw)*.55*s-.11*Math.sin(yaw)*s,.018*s,.018*s,.018*s,[1,1,.92],0);
+  // species texture cues: these make silhouettes read as fish, bird, insect, fungus, armor, etc.
+  if(kind==="water"){
+    obj(M.detail,x,lift+.90*s,z,.42*s,.055*s,.50*s,[.90,1,1],yaw,0,.25);
+    for(let i=-2;i<=2;i++){const q=at(i*.15,.05);obj(M.detail,q[0],lift+.98*s,q[1],.028*s,.018*s,.028*s,ac,yaw,0,.55)}
+  }
+  if(kind==="wing"){
+    for(const lx of[-.52,.52]){const q=at(lx,.04);obj(M.detail,q[0],lift+.82*s,q[1],.20*s,.032*s,.14*s,brighten(ac,.12),yaw+lx*.25,0,.62)}
+  }
+  if(kind==="armor"||kind==="rock"){
+    for(let i=-3;i<=3;i++){const q=at(i*.12,-.16+Math.abs(i)*.02);obj(M.fineCone,q[0],lift+1.16*s,q[1],.045*s,.18*s,.045*s,ac,yaw)}
+    obj(M.detail,x,lift+.76*s,z-.28*s,.44*s,.035*s,.18*s,brighten(ac,.08),yaw,0,.46);
+  }
+  if(kind==="crystal"){
+    obj(M.detail,x,lift+1.30*s,z,.50*s,.07*s,.50*s,[.86,1,1],yaw,0,.42);
+    obj(M.fineCone,x,lift+1.45*s,z,.10*s,.34*s,.10*s,[.65,.96,1],yaw,0,.62);
+  }
+  if(a.id==="shoebill"||a.id==="kingfisher"){
+    const q=at(0,.80);obj(M.fineCone,q[0],lift+1.03*s,q[1],.085*s,.58*s,.085*s,brighten(ac,.08),yaw,Math.PI/2,.94);
+  }
+  if(a.id==="leafy_seadragon")for(let i=-3;i<=3;i++){const q=at(i*.13,.08-i*.055);obj(M.detail,q[0],lift+.88*s,q[1],.055*s,.025*s,.12*s,brighten(ac,.10),yaw+i*.35,0,.62)}
+  if(a.id==="nudibranch")for(let i=-4;i<=4;i++){const q=at(i*.10,.30);obj(M.detail,q[0],lift+1.02*s,q[1],.042*s,.08*s,.042*s,brighten(ac,.08),yaw,0,.72)}
+  if(a.id==="okapi")for(let i=-2;i<=2;i++){const q=at(.33,-.18+i*.10);obj(M.box,q[0],lift+.55*s,q[1],.026*s,.26*s,.026*s,[.97,.95,.88],yaw)}
+};
+'''
+          s = s[:start] + creature_block + s[end:]
+
+          # Replace oldWorld wrapper with one that adds close object material cues, while reducing distant extras.
+          start = s.find('const oldWorld=world;')
+          end = s.find('const oldUpdate=update;', start)
+          if start == -1 or end == -1:
+              raise SystemExit('world wrapper range not found')
+          world_block = r'''
+const oldWorld=world;
+world=function(t){
+  drawCount=0;
+  oldWorld(t);
+  gl.uniform3f(loc.light,-.35+.12*Math.sin(t*.1),.9,.45+.10*Math.cos(t*.13));
+  for(let i=-4;i<=4;i++)obj(M.cone,i*18,5.5,-64,9,7,9,[.20,.39,.38],0,0,.38);
+  for(let i=-3;i<=3;i++)obj(M.sphere,i*15,hgt(i*15,-8)-.015,-8+Math.sin(i)*4,3.4,.030,2.2,[.17,.38,.29],0,0,.30);
+  for(const cl of clouds)obj(M.sphere,cl[0]+Math.sin(t*.08+cl[4])*3,cl[1],cl[2]+Math.cos(t*.07+cl[4])*2,cl[3],.30,cl[3]*.50,[.92,.96,.95],0,0,.16);
+  for(const sh of shells)if(Math.hypot(px-sh[0],pz-sh[1])<18)obj(M.detail,sh[0],hgt(sh[0],sh[1])+.07,sh[1],.18,.035,.10,[.92,.82,.66],sh[2],0,.78);
+  for(const r of rocks)if(Math.hypot(px-r[0],pz-r[1])<22){obj(M.detail,r[0]-.45,hgt(r[0],r[1])+.72,r[1]+.2,.32,.035,.25,[.18,.45,.26],.3,0,.72);obj(M.detail,r[0]+.28,hgt(r[0],r[1])+.63,r[1]-.18,.20,.025,.16,[.70,.74,.72],.1,0,.38)}
+  for(const w of waters)if(Math.hypot(px-w[0],pz-w[1])<24){for(let i=0;i<4;i++)obj(M.detail,w[0]+Math.sin(t+i)*w[2]*.45,.10,w[1]+Math.cos(t*.8+i)*w[2]*.28,.18,.015,.06,[.90,1,1],i,0,.32)}
+  for(const c of crystals)if(Math.hypot(px-c[0],pz-c[1])<24)obj(M.fineCone,c[0],hgt(c[0],c[1])+1.45,c[1],.16,.55,.16,[.82,1,1],t*.4,0,.58);
+  for(const p of poops)if(Math.hypot(px-p[0],pz-p[1])<16)obj(M.detail,p[0]+.12,hgt(p[0],p[1])+.47,p[1]-.05,.11,.045,.11,[.54,.34,.18],0,0,.82);
+  for(const v of vines)if(Math.hypot(px-v[0],pz-v[1])<24){const x=v[0]+Math.sin(t+v[3])*.12,z=v[1]+Math.cos(t+v[3])*.12;obj(M.box,x,hgt(v[0],v[1])+1.35*v[2],z,.035*v[2],.85*v[2],.035*v[2],[.14,.36,.20],v[3])}
+  for(const sp of spores)if(Math.hypot(px-sp[0],pz-sp[2])<24)obj(M.detail,sp[0]+Math.sin(t*.5+sp[3])*.7,sp[1]+Math.sin(t*.9+sp[3])*.25,sp[2]+Math.cos(t*.6+sp[3])*.7,.045,.045,.045,[.75,1,.92],0,0,.36);
+  for(const trk of tracks)obj(M.detail,trk[0],hgt(trk[0],trk[1])+.035,trk[1],.20,.018,.10,[.18,.24,.18],trk[2],0,.28);
+  document.body.dataset.draws=String(drawCount);
+};
+'''
+          s = s[:start] + world_block + s[end:]
+
+          s = s.replace('quality=fps<34?.50:fps<48?.72:fps>55?1:quality;', 'quality=fps<34?.48:fps<48?.70:fps>55?1:quality;')
+          s = s.replace('innerWidth<900?.86:1.15', 'innerWidth<900?.88:1.18')
+          p.write_text(s, encoding='utf-8')
+
+          sw = Path('sw.js')
+          if sw.exists():
+              x = sw.read_text(encoding='utf-8').replace('ikimono-hunt-v32','ikimono-hunt-v33').replace('ikimono-hunt-v31','ikimono-hunt-v33')
+              sw.write_text(x, encoding='utf-8')
+          PY
+      - name: commit
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add index.html sw.js
+          git commit -m "Apply v33 quality cleanup" || exit 0
+          git push origin HEAD:main

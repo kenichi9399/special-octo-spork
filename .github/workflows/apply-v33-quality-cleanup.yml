@@ -35,11 +35,8 @@ for(let i=0;i<6;i++){const tr=trees[i%trees.length];vines.push([tr[0],tr[1],tr[2
           if second != -1:
               s = s[:second] + s[second+len(dup):]
 
-          # slightly cleaner detail meshes without making the whole world expensive
           s = s.replace('const M={box:boxMesh(),sphere:sphereMesh(),cone:coneMesh(),smooth:sphereMesh(14,8),fineCone:coneMesh(14)};',
                         'const M={box:boxMesh(),sphere:sphereMesh(),cone:coneMesh(),smooth:sphereMesh(16,9),detail:sphereMesh(10,6),fineCone:coneMesh(14)};')
-
-          # keep draw budget controlled after removing duplicate nature pieces
           s = s.replace('if(drawCount++>360&&big<2.2)return;', 'if(drawCount++>320&&big<2.2)return;')
 
           start = s.find('const baseCreature=creature;')
@@ -60,12 +57,10 @@ creature=function(a,x,z,y,s=1,yaw=dir,t=0){
   const at=(lx,lz)=>[x+side[0]*lx*s+front[0]*lz*s,z+side[1]*lx*s+front[1]*lz*s];
   const lift=y+bob;
   const brighten=(arr,k)=>arr.map(v=>Math.min(1,v+k));
-  // close-up material layer: rounder body, soft belly, and a tiny eye catchlight
   obj(M.smooth,x,lift+.72*s,z,.50*s,.36*s,.60*s,brighten(c,.09),yaw,0,.30);
   obj(M.detail,x,lift+.58*s,z+.18*s,.34*s,.07*s,.40*s,brighten(c,.22),yaw,0,.58);
   obj(M.detail,x+Math.sin(yaw)*.55*s-.11*Math.cos(yaw)*s,lift+1.11*s,z+Math.cos(yaw)*.55*s+.11*Math.sin(yaw)*s,.018*s,.018*s,.018*s,[1,1,.92],0);
   obj(M.detail,x+Math.sin(yaw)*.55*s+.11*Math.cos(yaw)*s,lift+1.11*s,z+Math.cos(yaw)*.55*s-.11*Math.sin(yaw)*s,.018*s,.018*s,.018*s,[1,1,.92],0);
-  // species texture cues: these make silhouettes read as fish, bird, insect, fungus, armor, etc.
   if(kind==="water"){
     obj(M.detail,x,lift+.90*s,z,.42*s,.055*s,.50*s,[.90,1,1],yaw,0,.25);
     for(let i=-2;i<=2;i++){const q=at(i*.15,.05);obj(M.detail,q[0],lift+.98*s,q[1],.028*s,.018*s,.028*s,ac,yaw,0,.55)}
@@ -91,7 +86,6 @@ creature=function(a,x,z,y,s=1,yaw=dir,t=0){
 '''
           s = s[:start] + creature_block + s[end:]
 
-          # Replace oldWorld wrapper with one that adds close object material cues, while reducing distant extras.
           start = s.find('const oldWorld=world;')
           end = s.find('const oldUpdate=update;', start)
           if start == -1 or end == -1:
@@ -134,3 +128,4 @@ world=function(t){
           git add index.html sw.js
           git commit -m "Apply v33 quality cleanup" || exit 0
           git push origin HEAD:main
+# retrigger 1

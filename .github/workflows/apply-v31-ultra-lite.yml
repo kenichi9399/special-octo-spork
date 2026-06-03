@@ -1,0 +1,97 @@
+name: Apply v31 ultra lite
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-v31-ultra-lite.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          # Restore very cheap shader: no fragment grain, no pow, no expensive extra lighting.
+          s=re.sub(r'const vs=`attribute vec3 p,n;.*?`;\nconst fs=`precision mediump float;.*?`;',
+          'const vs=`attribute vec3 p,n;uniform mat4 m,vp;uniform vec3 col,light;varying vec3 c;varying float fog;void main(){vec4 w=m*vec4(p,1.);vec3 nn=normalize(mat3(m)*n);float d=max(dot(nn,normalize(light)),0.);float h=.18*max(nn.y,0.);c=col*(.38+d*.66+h)+vec3(.04,.055,.05);gl_Position=vp*w;fog=clamp((gl_Position.z/gl_Position.w-18.)/44.,0.,1.);}`;\nconst fs=`precision mediump float;varying vec3 c;varying float fog;uniform float alpha;void main(){vec3 sky=vec3(.58,.72,.76);gl_FragColor=vec4(mix(c,sky,fog),alpha);}`;',s,flags=re.S)
+          # Keep v29/v30 performance reductions and push harder for phones.
+          pairs={
+          'for(let i=0;i<38;i++)trees.push':'for(let i=0;i<22;i++)trees.push',
+          'for(let i=0;i<28;i++)trees.push':'for(let i=0;i<22;i++)trees.push',
+          'for(let i=0;i<90;i++){const x=Math.sin(i*9.7)*52':'for(let i=0;i<28;i++){const x=Math.sin(i*9.7)*52',
+          'for(let i=0;i<42;i++){const x=Math.sin(i*9.7)*52':'for(let i=0;i<28;i++){const x=Math.sin(i*9.7)*52',
+          'for(let i=0;i<38;i++)flowers.push':'for(let i=0;i<12;i++)flowers.push',
+          'for(let i=0;i<20;i++)flowers.push':'for(let i=0;i<12;i++)flowers.push',
+          'for(let i=0;i<52;i++)pebbles.push':'for(let i=0;i<12;i++)pebbles.push',
+          'for(let i=0;i<22;i++)pebbles.push':'for(let i=0;i<12;i++)pebbles.push',
+          'for(let i=0;i<24;i++)fireflies.push':'for(let i=0;i<8;i++)fireflies.push',
+          'for(let i=0;i<12;i++)fireflies.push':'for(let i=0;i<8;i++)fireflies.push',
+          'for(let i=0;i<46;i++){const w=waters[i%waters.length],a=i*.61':'for(let i=0;i<12;i++){const w=waters[i%waters.length],a=i*.61',
+          'for(let i=0;i<22;i++){const w=waters[i%waters.length],a=i*.61':'for(let i=0;i<12;i++){const w=waters[i%waters.length],a=i*.61',
+          'for(let i=0;i<24;i++)mushrooms.push':'for(let i=0;i<8;i++)mushrooms.push',
+          'for(let i=0;i<14;i++)mushrooms.push':'for(let i=0;i<8;i++)mushrooms.push',
+          'for(let i=0;i<42;i++)leaves.push':'for(let i=0;i<10;i++)leaves.push',
+          'for(let i=0;i<18;i++)leaves.push':'for(let i=0;i<10;i++)leaves.push',
+          'for(let i=0;i<10;i++)mist.push':'for(let i=0;i<5;i++)mist.push',
+          'for(let i=0;i<14;i++)clouds.push':'for(let i=0;i<5;i++)clouds.push',
+          'for(let i=0;i<8;i++)clouds.push':'for(let i=0;i<5;i++)clouds.push',
+          'for(let i=0;i<34;i++){const w=waters[i%waters.length],a=i*.78':'for(let i=0;i<8;i++){const w=waters[i%waters.length],a=i*.78',
+          'for(let i=0;i<16;i++){const w=waters[i%waters.length],a=i*.78':'for(let i=0;i<8;i++){const w=waters[i%waters.length],a=i*.78',
+          'for(let i=0;i<28;i++)spores.push':'for(let i=0;i<6;i++)spores.push',
+          'for(let i=0;i<12;i++)spores.push':'for(let i=0;i<6;i++)spores.push',
+          'for(let i=0;i<18;i++){const tr=trees[i%trees.length];vines.push':'for(let i=0;i<6;i++){const tr=trees[i%trees.length];vines.push',
+          'for(let i=0;i<10;i++){const tr=trees[i%trees.length];vines.push':'for(let i=0;i<6;i++){const tr=trees[i%trees.length];vines.push',
+          'function sphereMesh(seg=16,ring=10)':'function sphereMesh(seg=7,ring=4)',
+          'function sphereMesh(seg=10,ring=6)':'function sphereMesh(seg=7,ring=4)',
+          'function sphereMesh(seg=8,ring=5)':'function sphereMesh(seg=7,ring=4)',
+          'function coneMesh(seg=18)':'function coneMesh(seg=7)',
+          'function coneMesh(seg=10)':'function coneMesh(seg=7)',
+          'function coneMesh(seg=8)':'function coneMesh(seg=7)',
+          'innerWidth<900?1.45:1.8':'innerWidth<900?.72:1.0',
+          'innerWidth<900?1.12:1.45':'innerWidth<900?.72:1.0',
+          'innerWidth<900?0.92:1.25':'innerWidth<900?.72:1.0',
+          'if(tracks.length>28)tracks.shift()':'if(tracks.length>6)tracks.shift()',
+          'if(tracks.length>10)tracks.shift()':'if(tracks.length>6)tracks.shift()'
+          }
+          for a,b in pairs.items(): s=s.replace(a,b)
+          s=re.sub(r'function obj\(mesh,x,y,z,sx,sy,sz,col,yaw=0,pitch=0,alpha=1\)\{.*?draw\(mesh,m,col,alpha\)\}',
+          'function obj(mesh,x,y,z,sx,sy,sz,col,yaw=0,pitch=0,alpha=1){const big=Math.max(sx,sy,sz),d2=(x-px)*(x-px)+(z-pz)*(z-pz);if(big<.5&&d2>160)return;if(big<1.2&&d2>420)return;if(quality<.9&&big<1.1&&d2>140)return;if(drawCount++>260&&big<2.2)return;let m=I();m=tr(m,x,y,z);m=ry(m,yaw);m=rx(m,pitch);m=sc(m,sx,sy,sz);draw(mesh,m,col,alpha)}',s)
+          # Hide uncollected creatures sooner; nearby discoveries keep detail.
+          old='for(const a of animals)if(!found.has(a.id))creature(a,a.x,a.z,hgt(a.x,a.z)+.1,.62+Math.sin(t*2+a.bob)*.03,Math.sin(t+a.bob)*.2,t);'
+          new='for(const a of animals)if(!found.has(a.id)){const dd=Math.hypot(px-a.x,pz-a.z);if(dd<14)creature(a,a.x,a.z,hgt(a.x,a.z)+.1,.62+Math.sin(t*2+a.bob)*.03,Math.sin(t+a.bob)*.2,t);else if(dd<24){shade(a.x,a.z,.28);obj(M.cone,a.x,hgt(a.x,a.z)+.5,a.z,.14,.38,.14,a.accent,0,0,.35)}}'
+          s=s.replace(old,new)
+          s=re.sub(r'if\(dd<22\)creature\(a,a\.x,a\.z,hgt\(a\.x,a\.z\)\+\.1,\.62\+Math\.sin\(t\*2\+a\.bob\)\*\.03,Math\.sin\(t\+a\.bob\)\*\.2,t\);else if\(dd<32\)',
+          'if(dd<14)creature(a,a.x,a.z,hgt(a.x,a.z)+.1,.62+Math.sin(t*2+a.bob)*.03,Math.sin(t+a.bob)*.2,t);else if(dd<24)',s)
+          # Extra creature shine only for player / very close objects.
+          s=s.replace('oldCreature(a,x,z,y,s,yaw,t);const c=a.color','oldCreature(a,x,z,y,s,yaw,t);if(quality<1||Math.hypot(x-px,z-pz)>2.2)return;const c=a.color')
+          s=s.replace('oldCreature(a,x,z,y,s,yaw,t);if(quality<.9&&Math.hypot(x-px,z-pz)>4)return;const c=a.color','oldCreature(a,x,z,y,s,yaw,t);if(quality<1||Math.hypot(x-px,z-pz)>2.2)return;const c=a.color')
+          s=s.replace('quality=fps<42?.72:fps>54?1:quality;','quality=fps<34?.45:fps<48?.68:fps>55?1:quality;')
+          s=s.replace('quality=fps<36?.58:fps<48?.76:fps>55?1:quality;','quality=fps<34?.45:fps<48?.68:fps>55?1:quality;')
+          s=s.replace('quality=fps<34?.50:fps<48?.72:fps>55?1:quality;','quality=fps<34?.45:fps<48?.68:fps>55?1:quality;')
+          # Remove duplicate loops if present.
+          s=s.replace('for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++)if((i+j*j)%4===0)obj(M.sphere,i*9,hgt(i*9,j*9)+.01,j*9,2.7,.025,2.2,[.18+.02*(i%2),.43+.04*(j%2),.32],0,0,.28);for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++)if((i+j*j)%4===0)obj(M.sphere,i*9,hgt(i*9,j*9)+.01,j*9,2.7,.025,2.2,[.18+.02*(i%2),.43+.04*(j%2),.32],0,0,.28);','for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++)if((i+j*j)%4===0)obj(M.sphere,i*9,hgt(i*9,j*9)+.01,j*9,2.7,.025,2.2,[.18+.02*(i%2),.43+.04*(j%2),.32],0,0,.28);')
+          s=s.replace('for(const rd of reeds)obj(M.cone,rd[0],hgt(rd[0],rd[1])+.38,rd[1],.07,.62*rd[2],.07,[.16,.43,.25],rd[3]+Math.sin(t+rd[0])*.12);for(const lf of leaves)obj(M.sphere,lf[0],hgt(lf[0],lf[1])+.045,lf[1],.28,.018,.12,[.64,.40,.20],lf[2]);for(const rd of reeds)obj(M.cone,rd[0],hgt(rd[0],rd[1])+.38,rd[1],.07,.62*rd[2],.07,[.16,.43,.25],rd[3]+Math.sin(t+rd[0])*.12);for(const lf of leaves)obj(M.sphere,lf[0],hgt(lf[0],lf[1])+.045,lf[1],.28,.018,.12,[.64,.40,.20],lf[2]);','for(const rd of reeds)obj(M.cone,rd[0],hgt(rd[0],rd[1])+.38,rd[1],.07,.62*rd[2],.07,[.16,.43,.25],rd[3]+Math.sin(t+rd[0])*.12);for(const lf of leaves)obj(M.sphere,lf[0],hgt(lf[0],lf[1])+.045,lf[1],.28,.018,.12,[.64,.40,.20],lf[2]);')
+          sw=Path('sw.js')
+          p.write_text(s,encoding='utf-8')
+          if sw.exists(): sw.write_text(re.sub(r'ikimono-hunt-v\d+','ikimono-hunt-v31',sw.read_text(encoding='utf-8')),encoding='utf-8')
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          git add index.html sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Apply v31 ultra lite"
+          git push origin HEAD:main

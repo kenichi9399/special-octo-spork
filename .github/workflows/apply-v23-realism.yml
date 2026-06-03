@@ -1,0 +1,57 @@
+name: Apply v23 screen controls and realism
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-v23-realism.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Apply v23 changes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('let active=localStorage.getItem("hunt-active")||"kid",px=0,pz=8,py=0,vy=0,dir=0,last=performance.now(),input="",slowUntil=0,gateOpen=localStorage.getItem("gate-open")==="1",frames=0,joyX=0,joyY=0,joyOn=false;', 'let active=localStorage.getItem("hunt-active")||"kid",px=0,pz=8,py=0,vy=0,dir=0,camDir=0,last=performance.now(),input="",slowUntil=0,gateOpen=localStorage.getItem("gate-open")==="1",frames=0,joyX=0,joyY=0,joyOn=false,movePower=0;')
+          s=s.replace('const held={},found=new Set(JSON.parse(localStorage.getItem("hunt-found")||"[]")),poops=[[-8,4],[12,8],[20,-18],[-28,-12],[30,18],[-4,28]],waters=[[-20,6,12],[-20,20,8]],rocks=[[24,-1,8],[34,20,6],[-31,-25,6]],crystals=[[-28,30],[35,-25],[30,22],[13,-34]],trees=[];\nfor(let i=0;i<38;i++)trees.push([Math.cos(i)*30+Math.sin(i*3)*7,Math.sin(i)*30+Math.cos(i*2)*7,.8+Math.random()*.75]);', 'const held={},found=new Set(JSON.parse(localStorage.getItem("hunt-found")||"[]")),poops=[[-8,4],[12,8],[20,-18],[-28,-12],[30,18],[-4,28]],waters=[[-20,6,12],[-20,20,8]],rocks=[[24,-1,8],[34,20,6],[-31,-25,6]],crystals=[[-28,30],[35,-25],[30,22],[13,-34]],trees=[],grass=[],flowers=[],pebbles=[],fireflies=[];\nfor(let i=0;i<38;i++)trees.push([Math.cos(i)*30+Math.sin(i*3)*7,Math.sin(i)*30+Math.cos(i*2)*7,.8+Math.random()*.75]);\nfor(let i=0;i<90;i++){const x=Math.sin(i*9.7)*52,z=Math.cos(i*7.1)*52;if(!near(waters,2))grass.push([x,z,.55+((i*13)%9)/18])}\nfor(let i=0;i<38;i++)flowers.push([Math.sin(i*5.3)*45,Math.cos(i*8.2)*45,i%3]);\nfor(let i=0;i<52;i++)pebbles.push([Math.sin(i*11.1)*50,Math.cos(i*6.4)*50,.12+((i*5)%8)/35]);\nfor(let i=0;i<24;i++)fireflies.push([Math.sin(i*4.9)*34,1.8+((i*7)%10)/7,Math.cos(i*5.7)*34,i*.73]);')
+          s=s.replace('function near(list,r=0){return list.some(p=>Math.hypot(px-p[0],pz-p[1])<(p[2]||4)+r)}', 'function near(list,r=0){return list.some(p=>Math.hypot(px-p[0],pz-p[1])<(p[2]||4)+r)}\nfunction hgt(x,z){return Math.sin(x*.14)*.22+Math.cos(z*.13)*.18+Math.sin((x+z)*.07)*.14}\nfunction shade(x,z,s=.7){obj(M.sphere,x,hgt(x,z)+.025,z,s,.035,s,[.05,.07,.06],0,0,.32)}\nfunction angleStep(a,b,k){let d=((b-a+Math.PI)%(Math.PI*2))-Math.PI;return a+d*k}')
+          old_creature = 'function creature(a,x,z,y,s=1,yaw=dir,t=0){const c=a.color,ac=a.accent,wing=a.kind==="wing",water=a.kind==="water";obj(M.sphere,x,y+.72*s,z,.52*s*(water?1.25:1),.38*s*(wing ? .8 : 1),.62*s*(water?1.35:1),c,yaw);obj(M.sphere,x,y+1.02*s,z+.5*s,.28*s,.24*s,.28*s,c,yaw);if(wing){obj(M.sphere,x-.58*s,y+.78*s,z,.62*s,.18*s,.28*s,ac,yaw,Math.sin(t*7)*.25);obj(M.sphere,x+.58*s,y+.78*s,z,.62*s,.18*s,.28*s,ac,yaw,-Math.sin(t*7)*.25)}if(water)obj(M.cone,x,y+.75*s,z-.7*s,.22*s,.46*s,.22*s,ac,yaw,Math.PI/2);if(a.kind==="armor"||a.kind==="rock")for(let i=-2;i<=2;i++)obj(M.cone,x+i*.18*s,y+1.18*s,z-.15*s,.07*s,.24*s,.07*s,ac,yaw);if(a.kind==="run")for(let i=-1;i<=1;i++)obj(M.box,x,y+.66*s+i*.08*s,z-.56*s,.42*s,.025*s,.035*s,ac,yaw);if(a.kind==="crystal")obj(M.sphere,x,y+1.26*s,z,.45*s,.16*s,.45*s,ac,yaw);for(const lx of[-.24,.24])for(const lz of[-.18,.25])obj(M.box,x+Math.cos(yaw)*lx*s+Math.sin(yaw)*lz*s,y+.2*s,z-Math.sin(yaw)*lx*s+Math.cos(yaw)*lz*s,.07*s,.28*s,.07*s,c,yaw);obj(M.sphere,x+Math.sin(yaw)*.52*s-.09*Math.cos(yaw)*s,y+1.08*s,z+Math.cos(yaw)*.52*s+.09*Math.sin(yaw)*s,.04*s,.04*s,.04*s,[.02,.025,.03],0);obj(M.sphere,x+Math.sin(yaw)*.52*s+.09*Math.cos(yaw)*s,y+1.08*s,z+Math.cos(yaw)*.52*s-.09*Math.sin(yaw)*s,.04*s,.04*s,.04*s,[.02,.025,.03],0)}'
+          new_creature = 'function creature(a,x,z,y,s=1,yaw=dir,t=0){const c=a.color,ac=a.accent,wing=a.kind==="wing",water=a.kind==="water",bob=Math.sin(t*3+yaw)*.035*s;shade(x,z,.55*s);obj(M.sphere,x,y+.72*s+bob,z,.52*s*(water?1.25:1),.38*s*(wing ? .8 : 1),.62*s*(water?1.35:1),c,yaw);obj(M.sphere,x,y+1.02*s+bob,z+.5*s,.28*s,.24*s,.28*s,c,yaw);if(wing){obj(M.sphere,x-.58*s,y+.78*s+bob,z,.62*s,.18*s,.28*s,ac,yaw,Math.sin(t*8)*.38);obj(M.sphere,x+.58*s,y+.78*s+bob,z,.62*s,.18*s,.28*s,ac,yaw,-Math.sin(t*8)*.38)}if(water)obj(M.cone,x,y+.75*s+bob,z-.7*s,.22*s,.46*s,.22*s,ac,yaw,Math.PI/2);if(a.kind==="armor"||a.kind==="rock")for(let i=-2;i<=2;i++)obj(M.cone,x+i*.18*s,y+1.18*s+bob,z-.15*s,.07*s,.24*s,.07*s,ac,yaw);if(a.kind==="run")for(let i=-1;i<=1;i++)obj(M.box,x,y+.66*s+i*.08*s+bob,z-.56*s,.42*s,.025*s,.035*s,ac,yaw);if(a.kind==="crystal")obj(M.sphere,x,y+1.26*s+bob,z,.45*s,.16*s,.45*s,ac,yaw,0,.86);for(const lx of[-.24,.24])for(const lz of[-.18,.25])obj(M.box,x+Math.cos(yaw)*lx*s+Math.sin(yaw)*lz*s,y+.2*s,z-Math.sin(yaw)*lx*s+Math.cos(yaw)*lz*s,.07*s,.28*s,.07*s,c,yaw);obj(M.sphere,x+Math.sin(yaw)*.52*s-.09*Math.cos(yaw)*s,y+1.08*s+bob,z+Math.cos(yaw)*.52*s+.09*Math.sin(yaw)*s,.04*s,.04*s,.04*s,[.02,.025,.03],0);obj(M.sphere,x+Math.sin(yaw)*.52*s+.09*Math.cos(yaw)*s,y+1.08*s+bob,z+Math.cos(yaw)*.52*s-.09*Math.sin(yaw)*s,.04*s,.04*s,.04*s,[.02,.025,.03],0)}'
+          s=s.replace(old_creature,new_creature)
+          start=s.index('function world(t){')
+          end=s.index('function resize(){', start)
+          new_world='function world(t){gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.50+.04*Math.sin(t*.2),.67,.78,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);const gy=hgt(px,pz),cam=[px-Math.sin(camDir)*11,8+py+gy,pz-Math.cos(camDir)*11],vp=mul(persp(1.05,canvas.width/canvas.height,.1,120),look(cam,[px,1.1+py+gy,pz]));gl.uniformMatrix4fv(loc.vp,false,new Float32Array(vp));obj(M.box,0,-.12,0,58,.08,58,[.25,.58,.39]);for(let i=-6;i<=6;i++)for(let j=-6;j<=6;j++)if((i*i+j*j)%5===0)obj(M.sphere,i*8,hgt(i*8,j*8)-.02,j*8,3.8,.08,3.8,[.22,.54,.36],0,0,.65);for(let i=0;i<18;i++)obj(M.box,-35+i*4,hgt(-35+i*4,5+Math.sin(i)*3)+.05,5+Math.sin(i)*3,1.8,.05,1.0,[.83,.69,.43],.4);for(const w of waters){obj(M.sphere,w[0],.03,w[1],w[2],.06,w[2]*.65,[.18,.74,.82],0,0,.72);for(let r=0;r<3;r++)obj(M.sphere,w[0],.08+r*.012,w[1],(w[2]*.35+r+t%1)*1.8,.015,(w[2]*.22+r+t%1)*1.8,[.70,.95,1],0,0,.22)}for(const r of rocks){shade(r[0],r[1],r[2]*.22);obj(M.sphere,r[0],hgt(r[0],r[1])+.45,r[1],r[2]*.25,.45,r[2]*.2,[.45,.50,.52],.7)}for(const p of pebbles)obj(M.sphere,p[0],hgt(p[0],p[1])+.05,p[1],p[2],p[2]*.45,p[2]*.8,[.43,.45,.42],p[0]);for(const g of grass)obj(M.cone,g[0],hgt(g[0],g[1])+.22,g[1],.08*g[2],.35*g[2],.08*g[2],[.20,.58,.34],Math.sin(t+g[0])*.25);for(const f of flowers)obj(M.sphere,f[0],hgt(f[0],f[1])+.28,f[1],.12,.08,.12,f[2]===0?[.95,.55,.72]:f[2]===1?[.95,.85,.35]:[.75,.65,1]);for(const c of crystals){shade(c[0],c[1],1.4);for(let i=0;i<5;i++)obj(M.cone,c[0]+Math.sin(i)*.7,hgt(c[0],c[1])+.85+i*.08,c[1]+Math.cos(i)*.7,.18+i*.05,.75+i*.18,.18+i*.05,[.48,.92,1],i*.8,0,.88)}for(const tr of trees){const yy=hgt(tr[0],tr[1]);shade(tr[0],tr[1],1.1*tr[2]);obj(M.box,tr[0],yy+.9*tr[2],tr[1],.18*tr[2],.9*tr[2],.18*tr[2],[.46,.30,.17]);obj(M.cone,tr[0],yy+2.1*tr[2],tr[1],1.05*tr[2],1.45*tr[2],1.05*tr[2],[.18,.55,.38])}for(const p of poops){obj(M.sphere,p[0],hgt(p[0],p[1])+.16,p[1],.35,.16,.35,[.42,.25,.13]);obj(M.sphere,p[0],hgt(p[0],p[1])+.38,p[1],.26,.13,.26,[.42,.25,.13])}for(const fl of fireflies)obj(M.sphere,fl[0]+Math.sin(t+fl[3])*.7,fl[1]+Math.sin(t*1.7+fl[3])*.35,fl[2]+Math.cos(t+fl[3])*.7,.07,.07,.07,[.9,1,.45],0,0,.78);if(movePower>.15)for(let i=0;i<3;i++)obj(M.sphere,px-Math.sin(dir)*(.4+i*.18),hgt(px,pz)+.08,pz+Math.cos(dir)*(.4+i*.18),.16+i*.04,.035,.16+i*.04,[.70,.62,.48],0,0,.18);if(!gateOpen){obj(M.box,-30,hgt(-30,-28)+1.4,-28,2.4,1.4,.2,[.42,.31,.28]);obj(M.box,-30,hgt(-30,-28)+3,-28,2.8,.18,.3,[.56,.35,.2])}for(const a of animals)if(!found.has(a.id))creature(a,a.x,a.z,hgt(a.x,a.z)+.1,.62+Math.sin(t*2+a.bob)*.03,Math.sin(t+a.bob)*.2,t);creature(trait().a||{color:[.29,.65,.78],accent:[1,.8,.62],kind:"kid"},px,pz,py+gy+.1,1.05,dir,t);frames++;if(frames%20===2){const pix=new Uint8Array(16);gl.readPixels(Math.floor(canvas.width*.5),Math.floor(canvas.height*.5),2,2,gl.RGBA,gl.UNSIGNED_BYTE,pix);document.body.dataset.frames=String(frames);document.body.dataset.drawn=String(pix.some(v=>v>0));document.body.dataset.pixels=Array.from(pix).join(",")}}\n'
+          if start!=-1 and end!=-1:
+              s=s[:start]+new_world+s[end:]
+          old_update='function update(dt){if(!keypad.classList.contains("open")){const f=(held.KeyW?1:0)-(held.KeyS?1:0)-joyY,s=(held.KeyD?1:0)-(held.KeyA?1:0)+joyX,tr=trait(),slow=performance.now()<slowUntil?tr.poop:1,spd=(tr.a?tr.a.speed:6.4)*tr.sm*slow;if(f||s){dir=Math.atan2(s,f);const mag=Math.min(1,Math.hypot(f,s));px+=Math.sin(dir)*spd*dt*mag;pz-=Math.cos(dir)*spd*dt*mag}vy-=tr.grav*dt;py+=vy*dt;if(py<0){py=0;vy=0}for(const p of poops)if(Math.hypot(px-p[0],pz-p[1])<1.2){slowUntil=performance.now()+4200;toast(tr.poop>.8?"うんちでも あまり おそく ならない！":"うんちを ふんだ！ ゆっくりに なった。")}if(!gateOpen&&Math.hypot(px+30,pz+28)<3)openPad();px=Math.max(-55,Math.min(55,px));pz=Math.max(-55,Math.min(55,pz))}document.body.dataset.pos=px.toFixed(2)+","+pz.toFixed(2);document.body.dataset.dir=dir.toFixed(2);for(const a of animals)if(!found.has(a.id)&&Math.hypot(px-a.x,pz-a.z)<1.7){found.add(a.id);save();drawBook();toast(a.icon+" "+a.name+"を みつけた！")}}'
+          new_update='function update(dt){if(!keypad.classList.contains("open")){const f=(held.KeyW?1:0)-(held.KeyS?1:0)-joyY,s=(held.KeyD?1:0)-(held.KeyA?1:0)+joyX,tr=trait(),slow=performance.now()<slowUntil?tr.poop:1,spd=(tr.a?tr.a.speed:6.4)*tr.sm*slow,cd=camDir;if(f||s){const mag=Math.min(1,Math.hypot(f,s)),dx=Math.sin(cd)*f+Math.cos(cd)*s,dz=Math.cos(cd)*f-Math.sin(cd)*s;dir=Math.atan2(dx,dz);px+=dx*spd*dt*mag;pz+=dz*spd*dt*mag;movePower=mag}else movePower*=.82;camDir=angleStep(camDir,dir,.055);vy-=tr.grav*dt;py+=vy*dt;if(py<0){py=0;vy=0}for(const p of poops)if(Math.hypot(px-p[0],pz-p[1])<1.2){slowUntil=performance.now()+4200;toast(tr.poop>.8?"うんちでも あまり おそく ならない！":"うんちを ふんだ！ ゆっくりに なった。")}if(!gateOpen&&Math.hypot(px+30,pz+28)<3)openPad();px=Math.max(-55,Math.min(55,px));pz=Math.max(-55,Math.min(55,pz))}document.body.dataset.pos=px.toFixed(2)+","+pz.toFixed(2);document.body.dataset.dir=dir.toFixed(2);document.body.dataset.cam=camDir.toFixed(2);for(const a of animals)if(!found.has(a.id)&&Math.hypot(px-a.x,pz-a.z)<1.7){found.add(a.id);save();drawBook();toast(a.icon+" "+a.name+"を みつけた！")}}'
+          s=s.replace(old_update,new_update)
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js')
+          sws=sw.read_text(encoding='utf-8')
+          for old in ['ikimono-hunt-v18','ikimono-hunt-v19','ikimono-hunt-v20','ikimono-hunt-v21','ikimono-hunt-v22']:
+              sws=sws.replace(old,'ikimono-hunt-v23')
+          sw.write_text(sws,encoding='utf-8')
+          PY
+      - name: Commit update
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          if git diff --quiet; then
+            echo "No changes"
+          else
+            git add index.html sw.js
+            git commit -m "Apply v23 screen controls and realism"
+            git push
+          fi

@@ -1,0 +1,40 @@
+name: Apply v25 creature realism
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-v25-creature-realism.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          creature=r'''function creature(a,x,z,y,s=1,yaw=dir,t=0){const c=a.color,ac=a.accent,wing=a.kind==="wing",water=a.kind==="water",bob=Math.sin(t*3+yaw)*.035*s,front=[Math.sin(yaw),Math.cos(yaw)],side=[Math.cos(yaw),-Math.sin(yaw)],at=(lx,lz)=>[x+side[0]*lx*s+front[0]*lz*s,z+side[1]*lx*s+front[1]*lz*s];shade(x,z,.55*s);obj(M.sphere,x,y+.72*s+bob,z,.52*s*(water?1.25:1),.38*s*(wing?.8:1),.62*s*(water?1.35:1),c,yaw);obj(M.sphere,x,y+1.02*s+bob,z+.5*s,.28*s,.24*s,.28*s,c,yaw);if(wing){obj(M.sphere,x-.58*s,y+.78*s+bob,z,.62*s,.18*s,.28*s,ac,yaw,Math.sin(t*8)*.38);obj(M.sphere,x+.58*s,y+.78*s+bob,z,.62*s,.18*s,.28*s,ac,yaw,-Math.sin(t*8)*.38)}if(water)obj(M.cone,x,y+.75*s+bob,z-.7*s,.22*s,.46*s,.22*s,ac,yaw,Math.PI/2);if(a.kind==="armor"||a.kind==="rock")for(let i=-2;i<=2;i++){const q=at(i*.16,-.15);obj(M.cone,q[0],y+1.18*s+bob,q[1],.07*s,.24*s,.07*s,ac,yaw)}if(a.kind==="run")for(let i=-1;i<=1;i++)obj(M.box,x,y+.66*s+i*.08*s+bob,z-.56*s,.42*s,.025*s,.035*s,ac,yaw);if(a.kind==="crystal")obj(M.sphere,x,y+1.26*s+bob,z,.45*s,.16*s,.45*s,ac,yaw,0,.86);if(a.id==="leafy_seadragon")for(let i=-2;i<=2;i++){const q=at(i*.18,.15-i*.08);obj(M.cone,q[0],y+.92*s+bob,q[1],.09*s,.42*s,.09*s,ac,yaw+i*.45,Math.PI/2)}if(a.id==="echidna")for(let i=-3;i<=3;i++){const q=at(i*.13,-.12);obj(M.cone,q[0],y+1.1*s+bob,q[1],.055*s,.28*s,.055*s,ac,yaw)}if(a.id==="axolotl")for(const lx of[-.34,.34])for(let i=0;i<3;i++){const q=at(lx,.38+i*.08);obj(M.cone,q[0],y+1.06*s+i*.04+bob,q[1],.05*s,.22*s,.05*s,ac,yaw+lx*1.4,Math.PI/2)}if(a.id==="shoebill"){const q=at(0,.78);obj(M.cone,q[0],y+1.03*s+bob,q[1],.16*s,.5*s,.16*s,ac,yaw,Math.PI/2);for(const lx of[-.18,.18]){const l=at(lx,-.05);obj(M.box,l[0],y+.32*s,l[1],.045*s,.42*s,.045*s,[.16,.14,.12],yaw)}}if(a.id==="horned_lizard")for(const lx of[-.18,.18]){const q=at(lx,.6);obj(M.cone,q[0],y+1.22*s+bob,q[1],.07*s,.28*s,.07*s,ac,yaw)}if(a.id==="owl_moth"){for(const lx of[-.62,.62]){const q=at(lx,.05);obj(M.sphere,q[0],y+.82*s+bob,q[1],.16*s,.055*s,.16*s,[.12,.10,.08],yaw,0,.85)}}if(a.id==="pangolin")for(let i=-2;i<=2;i++){const q=at(i*.13,-.28);obj(M.box,q[0],y+1.03*s+bob,q[1],.09*s,.05*s,.18*s,ac,yaw)}if(a.id==="okapi")for(let i=-2;i<=2;i++)for(const lx of[-.25,.25]){const q=at(lx,-.18+i*.12);obj(M.box,q[0],y+.54*s+bob,q[1],.035*s,.32*s,.035*s,ac,yaw)}if(a.id==="ayeaye"){const q=at(.42,.35);obj(M.box,q[0],y+.76*s+bob,q[1],.035*s,.45*s,.035*s,ac,yaw)}if(a.id==="luna_moth")for(const lx of[-.72,.72]){const q=at(lx,-.08);obj(M.cone,q[0],y+.58*s+bob,q[1],.16*s,.58*s,.16*s,ac,yaw+lx*.35,Math.PI)}if(a.id==="pygmy_hippo"){obj(M.sphere,x,y+.62*s+bob,z,.72*s,.34*s,.55*s,c,yaw);obj(M.sphere,x,y+1.03*s+bob,z+.65*s,.11*s,.11*s,.11*s,ac,yaw)}if(a.id==="isopod")for(let i=-3;i<=3;i++){const q=at(0,-.25+i*.12);obj(M.box,q[0],y+.96*s+bob,q[1],.42*s,.04*s,.06*s,ac,yaw)}if(a.id==="mycena"){obj(M.box,x,y+.62*s+bob,z,.08*s,.55*s,.08*s,[.83,1,1],yaw,0,.72);obj(M.sphere,x,y+1.28*s+bob,z,.46*s,.18*s,.46*s,ac,yaw,0,.72)}if(a.id==="nudibranch")for(let i=-3;i<=3;i++){const q=at(i*.13,.28);obj(M.sphere,q[0],y+1.03*s+bob,q[1],.06*s,.13*s,.06*s,ac,yaw)}if(a.id==="kingfisher"){const q=at(0,.8);obj(M.cone,q[0],y+1.05*s+bob,q[1],.09*s,.58*s,.09*s,ac,yaw,Math.PI/2);obj(M.sphere,x,y+.98*s+bob,z-.22*s,.2*s,.1*s,.32*s,[.95,.48,.21],yaw)}if(a.id==="mantis_shrimp")for(const lx of[-.38,.38]){const q=at(lx,.55);obj(M.cone,q[0],y+.86*s+bob,q[1],.09*s,.38*s,.09*s,ac,yaw+lx,Math.PI/2)}for(const lx of[-.24,.24])for(const lz of[-.18,.25]){const q=at(lx,lz);obj(M.box,q[0],y+.2*s,q[1],.07*s,.28*s,.07*s,c,yaw)}obj(M.sphere,x+Math.sin(yaw)*.52*s-.09*Math.cos(yaw)*s,y+1.08*s+bob,z+Math.cos(yaw)*.52*s+.09*Math.sin(yaw)*s,.04*s,.04*s,.04*s,[.02,.025,.03],0);obj(M.sphere,x+Math.sin(yaw)*.52*s+.09*Math.cos(yaw)*s,y+1.08*s+bob,z+Math.cos(yaw)*.52*s-.09*Math.sin(yaw)*s,.04*s,.04*s,.04*s,[.02,.025,.03],0)}'''
+          s=re.sub(r'function creature\(a,x,z,y,s=1,yaw=dir,t=0\).*?\nfunction world',creature+'\nfunction world',s,flags=re.S)
+          s=s.replace('dx=Math.sin(cd)*f+Math.cos(cd)*s,dz=Math.cos(cd)*f-Math.sin(cd)*s','dx=Math.sin(cd)*f-Math.cos(cd)*s,dz=Math.cos(cd)*f+Math.sin(cd)*s')
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js')
+          if sw.exists(): sw.write_text(re.sub(r'ikimono-hunt-v\d+','ikimono-hunt-v25',sw.read_text(encoding='utf-8')),encoding='utf-8')
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          git add index.html sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Apply v25 creature realism and joystick fix"
+          git push origin HEAD:main

@@ -1,0 +1,57 @@
+name: Apply v21 touch controls
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-v21-touch.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Apply touch update
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          repl = [
+          ('.padWrap{position:fixed;right:14px;bottom:14px;display:flex;gap:10px;align-items:end}.pad{width:132px;height:132px;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);gap:6px}.pad button,.jump,.respawn{border:1px solid rgba(35,51,51,.18);border-radius:8px;background:rgba(255,255,255,.86);font:inherit;font-weight:900;box-shadow:0 8px 18px rgba(20,40,50,.14)}.up{grid-column:2}.left{grid-column:1;grid-row:2}.right{grid-column:3;grid-row:2}.down{grid-column:2;grid-row:3}.jump{width:78px;height:78px;border-radius:50%;background:#f4b653}.respawn{position:fixed;left:50%;bottom:16px;translate:-50% 0;height:44px;padding:0 18px;border-radius:999px}', '.padWrap{position:fixed;right:14px;bottom:14px;display:flex;gap:12px;align-items:end}.joy{width:142px;height:142px;border-radius:50%;border:1px solid rgba(35,51,51,.18);background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.9),rgba(255,255,255,.55));box-shadow:0 8px 22px rgba(20,40,50,.16);position:relative;touch-action:none}.knob{width:58px;height:58px;border-radius:50%;background:#fff;border:1px solid #cfd8d3;box-shadow:0 8px 18px rgba(20,40,50,.18);position:absolute;left:50%;top:50%;translate:-50% -50%}.jump,.respawn{border:1px solid rgba(35,51,51,.18);border-radius:8px;background:rgba(255,255,255,.86);font:inherit;font-weight:900;box-shadow:0 8px 18px rgba(20,40,50,.14)}.jump{width:84px;height:84px;border-radius:50%;background:#f4b653}.respawn{position:fixed;left:50%;bottom:16px;translate:-50% 0;height:44px;padding:0 18px;border-radius:999px}'),
+          ('WebGL 3Dで起動中。めずらしい生き物を見つけて変身しよう。', '3Dで うごいています。めずらしい いきものを みつけて へんしんしよう。'),
+          ('<section class="keypad" id="keypad"><div style="display:flex;align-items:center;gap:8px"><b>ひみつの数字</b><button class="close" id="closeKeypad">×</button></div><div class="code" id="code">----</div><div class="keys" id="keys"></div></section>\n<button class="respawn" id="respawn">リスポーン</button>\n<div class="padWrap"><div class="pad"><button class="up" data-k="KeyW">↑</button><button class="left" data-k="KeyA">←</button><button class="right" data-k="KeyD">→</button><button class="down" data-k="KeyS">↓</button></div><button class="jump" id="jump">JUMP</button></div>', '<section class="keypad" id="keypad"><div style="display:flex;align-items:center;gap:8px"><b>ひみつの すうじ</b><button class="close" id="closeKeypad">×</button></div><div class="code" id="code">----</div><div class="keys" id="keys"></div></section>\n<button class="respawn" id="respawn">もどる</button>\n<div class="padWrap"><div class="joy" id="joy"><div class="knob" id="knob"></div></div><button class="jump" id="jump">ジャンプ</button></div>'),
+          ('"水辺でふわふわ"', '"みずべで ふわふわ"'),('"ウンチに強い"', '"うんちに つよい"'),('"水辺で大ジャンプ"', '"みずべで おおジャンプ"'),('"空中でゆっくり"', '"そらで ゆっくり"'),('"岩でふんばる"', '"いわで ふんばる"'),('"高く舞う"', '"たかく まう"'),('"ゆっくり安定"', '"ゆっくり あんてい"'),('"足が速い"', '"はしるのが はやい"'),('"木の近くが得意"', '"きの ちかくが とくい"'),('"軽く舞う"', '"かるく まう"'),('"水辺で安定"', '"みずべで あんてい"'),('"岩とウンチに強い"', '"いわと うんちに つよい"'),('"結晶で光る"', '"きらきらで ひかる"'),('"水辺でゆっくり"', '"みずべで ゆっくり"'),('"すばやく飛ぶ"', '"すばやく とぶ"'),('"水辺で速い"', '"みずべで はやい"'),
+          ('frames=0;', 'frames=0,joyX=0,joyY=0,joyOn=false;'),
+          ('この端末では3D表示が使えません。', 'このスマホでは 3Dが つかえません。'),
+          ('function trait(){const a=animals.find(x=>x.id===active);let sm=1,jm=1,grav=24,poop=.48,msg="";if(!a)return{a,sm,jm,grav,poop,msg};if(a.kind==="water"){sm*=near(waters,2)?1.42:.85;if(near(waters,2)){jm*=a.id==="axolotl"?1.25:1;msg="水辺の特性で元気！"}}if(a.kind==="wing"){if(py>0)grav*=.55;msg="羽でゆっくり落ちます。"}if(a.kind==="rock"&&near(rocks,1)){sm*=1.25;poop=.76;msg="岩場でふんばります。"}if(a.kind==="armor")poop=.85;if(a.kind==="tree"&&near(trees.map(t=>[t[0],t[1],3]),1)){sm*=1.14;jm*=1.25;msg="木の近くで身軽！"}if(a.kind==="crystal"&&near(crystals.map(c=>[c[0],c[1],4]),1)){sm*=1.15;jm*=1.15;msg="結晶の近くで光ります。"}if(a.kind==="run"&&held.KeyW)sm*=1.2;return{a,sm,jm,grav,poop,msg}}', 'function trait(){const a=animals.find(x=>x.id===active);let sm=1,jm=1,grav=24,poop=.48,msg="";if(!a)return{a,sm,jm,grav,poop,msg};if(a.kind==="water"){sm*=near(waters,2)?1.42:.85;if(near(waters,2)){jm*=a.id==="axolotl"?1.25:1;msg="みずべで げんき！"}}if(a.kind==="wing"){if(py>0)grav*=.55;msg="はねで ゆっくり おります。"}if(a.kind==="rock"&&near(rocks,1)){sm*=1.25;poop=.76;msg="いわばで ふんばります。"}if(a.kind==="armor")poop=.85;if(a.kind==="tree"&&near(trees.map(t=>[t[0],t[1],3]),1)){sm*=1.14;jm*=1.25;msg="きの ちかくで みがる！"}if(a.kind==="crystal"&&near(crystals.map(c=>[c[0],c[1],4]),1)){sm*=1.15;jm*=1.15;msg="きらきらの ちかくで ひかります。"}if(a.kind==="run"&&(held.KeyW||joyY<-.2))sm*=1.2;return{a,sm,jm,grav,poop,msg}}'),
+          ('a.name+"にへんしん！ "', 'a.name+"に へんしん！ "'),
+          ('function update(dt){if(!keypad.classList.contains("open")){const f=(held.KeyW?1:0)-(held.KeyS?1:0),s=(held.KeyD?1:0)-(held.KeyA?1:0),tr=trait(),slow=performance.now()<slowUntil?tr.poop:1,spd=(tr.a?tr.a.speed:6.4)*tr.sm*slow;if(f||s){dir=Math.atan2(s,-f);px+=Math.sin(dir)*spd*dt;pz-=Math.cos(dir)*spd*dt}vy-=tr.grav*dt;py+=vy*dt;if(py<0){py=0;vy=0}for(const p of poops)if(Math.hypot(px-p[0],pz-p[1])<1.2){slowUntil=performance.now()+4200;toast(tr.poop>.8?"特性でウンチでもあまり遅くならない！":"ウンチをふんだ！足がゆっくりに。")}if(!gateOpen&&Math.hypot(px+30,pz+28)<3)openPad();px=Math.max(-55,Math.min(55,px));pz=Math.max(-55,Math.min(55,pz))}for(const a of animals)if(!found.has(a.id)&&Math.hypot(px-a.x,pz-a.z)<1.7){found.add(a.id);save();drawBook();toast(a.icon+" "+a.name+"をみつけた！")}}', 'function update(dt){if(!keypad.classList.contains("open")){const f=(held.KeyW?1:0)-(held.KeyS?1:0)-joyY,s=(held.KeyD?1:0)-(held.KeyA?1:0)+joyX,tr=trait(),slow=performance.now()<slowUntil?tr.poop:1,spd=(tr.a?tr.a.speed:6.4)*tr.sm*slow;if(f||s){dir=Math.atan2(s,-f);const mag=Math.min(1,Math.hypot(f,s));px+=Math.sin(dir)*spd*dt*mag;pz-=Math.cos(dir)*spd*dt*mag}vy-=tr.grav*dt;py+=vy*dt;if(py<0){py=0;vy=0}for(const p of poops)if(Math.hypot(px-p[0],pz-p[1])<1.2){slowUntil=performance.now()+4200;toast(tr.poop>.8?"うんちでも あまり おそく ならない！":"うんちを ふんだ！ ゆっくりに なった。")}if(!gateOpen&&Math.hypot(px+30,pz+28)<3)openPad();px=Math.max(-55,Math.min(55,px));pz=Math.max(-55,Math.min(55,pz))}document.body.dataset.pos=px.toFixed(2)+","+pz.toFixed(2);document.body.dataset.dir=dir.toFixed(2);for(const a of animals)if(!found.has(a.id)&&Math.hypot(px-a.x,pz-a.z)<1.7){found.add(a.id);save();drawBook();toast(a.icon+" "+a.name+"を みつけた！")}}'),
+          ('スタートにもどりました。', 'スタートに もどりました。'),('扉がひらいた！', 'ドアが ひらいた！'),('もういちど数字を見てみよう。', 'もういちど すうじを みてみよう。'),
+          ('document.querySelectorAll("[data-k]").forEach(b=>{b.onpointerdown=e=>{e.preventDefault();held[b.dataset.k]=1};b.onpointerup=b.onpointercancel=b.onpointerleave=()=>held[b.dataset.k]=0});', 'const joy=$("joy"),knob=$("knob");function setJoy(e){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,lim=r.width*.34,len=Math.hypot(dx,dy),k=len>lim?lim/len:1;joyX=dx*k/lim;joyY=dy*k/lim;knob.style.transform=`translate(${dx*k}px,${dy*k}px)`}function clearJoy(){joyOn=false;joyX=0;joyY=0;knob.style.transform="translate(0,0)"}joy.onpointerdown=e=>{e.preventDefault();joyOn=true;joy.setPointerCapture(e.pointerId);setJoy(e)};joy.onpointermove=e=>{if(joyOn) setJoy(e)};joy.onpointerup=joy.onpointercancel=clearJoy;'),
+          ('WebGL 3Dで起動しました。', '3Dで うごいています。'),('setInterval(()=>{if(frames<3)loop(performance.now())},120)', 'setInterval(()=>{if(performance.now()-last>80)loop(performance.now())},80)')
+          ]
+          for old, new in repl:
+              s = s.replace(old, new)
+          p.write_text(s, encoding='utf-8')
+          sw = Path('sw.js')
+          sws = sw.read_text(encoding='utf-8').replace('ikimono-hunt-v18', 'ikimono-hunt-v21').replace('ikimono-hunt-v19', 'ikimono-hunt-v21').replace('ikimono-hunt-v20', 'ikimono-hunt-v21')
+          sw.write_text(sws, encoding='utf-8')
+          PY
+      - name: Commit update
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          if git diff --quiet; then
+            echo "No changes"
+          else
+            git add index.html sw.js
+            git commit -m "Apply v21 touch controls"
+            git push
+          fi

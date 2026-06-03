@@ -1,0 +1,46 @@
+name: Apply v22 joystick layout
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-v22-layout.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Apply v22 changes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('.padWrap{position:fixed;right:14px;bottom:14px;display:flex;gap:12px;align-items:end}.joy{width:142px;height:142px;border-radius:50%;border:1px solid rgba(35,51,51,.18);background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.9),rgba(255,255,255,.55));box-shadow:0 8px 22px rgba(20,40,50,.16);position:relative;touch-action:none}.knob{width:58px;height:58px;border-radius:50%;background:#fff;border:1px solid #cfd8d3;box-shadow:0 8px 18px rgba(20,40,50,.18);position:absolute;left:50%;top:50%;translate:-50% -50%}.jump,.respawn{border:1px solid rgba(35,51,51,.18);border-radius:8px;background:rgba(255,255,255,.86);font:inherit;font-weight:900;box-shadow:0 8px 18px rgba(20,40,50,.14)}.jump{width:84px;height:84px;border-radius:50%;background:#f4b653}.respawn{position:fixed;left:50%;bottom:16px;translate:-50% 0;height:44px;padding:0 18px;border-radius:999px}', '.padWrap{position:fixed;left:14px;bottom:14px;display:flex;gap:12px;align-items:end}.joy{width:142px;height:142px;border-radius:50%;border:1px solid rgba(35,51,51,.18);background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.9),rgba(255,255,255,.55));box-shadow:0 8px 22px rgba(20,40,50,.16);position:relative;touch-action:none}.knob{width:58px;height:58px;border-radius:50%;background:#fff;border:1px solid #cfd8d3;box-shadow:0 8px 18px rgba(20,40,50,.18);position:absolute;left:50%;top:50%;translate:-50% -50%}.jump,.respawn{border:1px solid rgba(35,51,51,.18);border-radius:8px;background:rgba(255,255,255,.86);font:inherit;font-weight:900;box-shadow:0 8px 18px rgba(20,40,50,.14)}.jump{position:fixed;right:18px;bottom:18px;width:84px;height:84px;border-radius:50%;background:#f4b653}.respawn{position:fixed;left:50%;bottom:16px;translate:-50% 0;height:44px;padding:0 18px;border-radius:999px}')
+          s = s.replace('.respawn{left:50%;bottom:168px;translate:-50% 0}.hint{font-size:12px}', '.respawn{left:50%;bottom:168px;translate:-50% 0}.hint{font-size:12px}')
+          s = s.replace('dir=Math.atan2(s,-f);', 'dir=Math.atan2(s,f);')
+          p.write_text(s, encoding='utf-8')
+          sw = Path('sw.js')
+          sws = sw.read_text(encoding='utf-8')
+          for old in ['ikimono-hunt-v18','ikimono-hunt-v19','ikimono-hunt-v20','ikimono-hunt-v21']:
+              sws = sws.replace(old, 'ikimono-hunt-v22')
+          sw.write_text(sws, encoding='utf-8')
+          PY
+      - name: Commit update
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          if git diff --quiet; then
+            echo "No changes"
+          else
+            git add index.html sw.js
+            git commit -m "Apply v22 joystick layout"
+            git push
+          fi

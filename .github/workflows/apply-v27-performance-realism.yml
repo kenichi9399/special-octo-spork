@@ -1,0 +1,47 @@
+name: Apply v27 performance realism
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-v27-performance-realism.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('movePower=0,stepTick=0;','movePower=0,stepTick=0,drawCount=0,quality=1,fpsTime=performance.now(),fpsFrames=0;')
+          s=re.sub(r'function obj\(mesh,x,y,z,sx,sy,sz,col,yaw=0,pitch=0,alpha=1\)\{.*?draw\(mesh,m,col,alpha\)\}',
+          'function obj(mesh,x,y,z,sx,sy,sz,col,yaw=0,pitch=0,alpha=1){const big=Math.max(sx,sy,sz),d2=(x-px)*(x-px)+(z-pz)*(z-pz);if(big<.36&&d2>520)return;if(big<1.05&&d2>1350)return;if(quality<.82&&big<.7&&d2>420)return;if(drawCount++>1100&&big<1.4)return;let m=I();m=tr(m,x,y,z);m=ry(m,yaw);m=rx(m,pitch);m=sc(m,sx,sy,sz);draw(mesh,m,col,alpha)}',s)
+          s=re.sub(r'function resize\(\)\{canvas\.width=Math\.floor\(innerWidth\*Math\.min\(devicePixelRatio,2\)\);canvas\.height=Math\.floor\(innerHeight\*Math\.min\(devicePixelRatio,2\)\);canvas\.style\.width=innerWidth\+"px";canvas\.style\.height=innerHeight\+"px"\}',
+          'function resize(){const d=Math.min(devicePixelRatio,innerWidth<900?1.45:1.8);canvas.width=Math.floor(innerWidth*d);canvas.height=Math.floor(innerHeight*d);canvas.style.width=innerWidth+"px";canvas.style.height=innerHeight+"px"}',s)
+          s=s.replace('const oldWorld=world;world=function(t){oldWorld(t);','const oldWorld=world;world=function(t){drawCount=0;oldWorld(t);')
+          s=s.replace('for(const trk of tracks)obj(M.sphere,trk[0],hgt(trk[0],trk[1])+.035,trk[1],.20,.018,.10,[.18,.24,.18],trk[2],0,.28)};',
+          'for(const trk of tracks)obj(M.sphere,trk[0],hgt(trk[0],trk[1])+.035,trk[1],.20,.018,.10,[.18,.24,.18],trk[2],0,.28);document.body.dataset.draws=String(drawCount)};')
+          if 'oldLoop=loop' not in s:
+            s=s.replace('if(active!=="kid"&&!found.has(active))active="kid";', 'const oldLoop=loop;loop=function(now){fpsFrames++;if(now-fpsTime>1200){const fps=fpsFrames*1000/(now-fpsTime);quality=fps<42?.72:fps>54?1:quality;document.body.dataset.fps=fps.toFixed(0);document.body.dataset.quality=quality.toFixed(2);fpsTime=now;fpsFrames=0}oldLoop(now)};\nif(active!=="kid"&&!found.has(active))active="kid";')
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js')
+          if sw.exists(): sw.write_text(re.sub(r'ikimono-hunt-v\d+','ikimono-hunt-v27',sw.read_text(encoding='utf-8')),encoding='utf-8')
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          git add index.html sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Apply v27 performance realism"
+          git push origin HEAD:main
